@@ -1,0 +1,18 @@
+inpackage: false
+with-expecter: true
+testonly: false
+exported: true
+dir: gen/mockery
+outpkg: mockery
+resolve-type-alias: false
+issue-845-fix: true
+filename: "{{.InterfaceName}}.{{.PackageName}}.mockery.go"
+mockname: Mock{{.InterfaceName}}_{{.PackageName}}
+packages:
+    github.com/walteh/gotmpls/pkg/finder:
+        interfaces:
+            TemplateFinder: {}
+    github.com/walteh/gotmpls/pkg/lsp/protocol:
+        interfaces:
+            Client: {}
+            Server: {}

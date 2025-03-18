@@ -1,0 +1,19 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# background for semantic-shift
+
+this is a golang repo to generate beautiful semantic vscode extensions 
+
+# project structure
+
+the ./pkg/designer is what does the generation
+
+the ./pkg/colortheme is what holds and manages the vscode *color-theme.json files
+
+the ./cmd/ss is the main command line executable 
+
+the ./cmd/ss-wasm is the wasm executable
