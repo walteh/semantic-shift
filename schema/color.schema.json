@@ -105,7 +105,7 @@
 					"$ref": "#/definitions/Color"
 				}
 			},
-			"required": ["model", "value"],
+			"required": ["value"],
 			"type": "object"
 		},
 		"ColorSchema": {
@@ -389,23 +389,7 @@
 					"type": "string"
 				},
 				"origin": {
-					"additionalProperties": false,
-					"properties": {
-						"x": {
-							"items": {
-								"$ref": "#/definitions/Color"
-							},
-							"type": "array"
-						},
-						"y": {
-							"items": {
-								"$ref": "#/definitions/Color"
-							},
-							"type": "array"
-						}
-					},
-					"required": ["x", "y"],
-					"type": "object"
+					"$ref": "#/definitions/Origin"
 				},
 				"semantic": {
 					"type": ["string", "null"]
@@ -422,6 +406,25 @@
 				}
 			},
 			"required": ["colors", "name", "origin", "semantic", "type"],
+			"type": "object"
+		},
+		"Origin": {
+			"additionalProperties": false,
+			"properties": {
+				"x": {
+					"items": {
+						"$ref": "#/definitions/Color"
+					},
+					"type": "array"
+				},
+				"y": {
+					"items": {
+						"$ref": "#/definitions/Color"
+					},
+					"type": "array"
+				}
+			},
+			"required": ["x", "y"],
 			"type": "object"
 		},
 		"Palette": {
