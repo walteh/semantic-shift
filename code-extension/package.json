@@ -1,0 +1,33 @@
+{
+  "name": "semantic-shift",
+  "displayName": "semantic-shift",
+  "description": "a color theme that takes full advantage of semantic tokens",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "contributes": {
+    "themes": [
+      {
+        "label": "semantic-shift",
+        "uiTheme": "vs",
+        "path": "./themes/semantic-shift-color-theme.json"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "scopes": {
+          "templateType": ["entity.name.type.template"]
+        }
+      }
+    ]
+  },
+  "configurationDefaults": {
+    "[go]": {
+      "editor.semanticHighlighting.enabled": true
+    }
+  }
+}

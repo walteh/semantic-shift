@@ -1,0 +1,564 @@
+{
+	"name": "semantic-shift",
+	"semanticHighlighting": true,
+	"colors": {
+		"editor.background": "#f5f5f5",
+		"editor.foreground": "#333333",
+		"list.activeSelectionIconForeground": "#fff"
+	},
+	"semanticTokenColors": {
+		//===========================================
+		// Core Go Elements
+		//===========================================
+		// Type System - Primary Visual Anchors
+		"type.struct": {
+			"foreground": "#560bad", // Purple Heart 3 - Deep purple for structs
+			"bold": true
+		},
+		"type.interface": {
+			"foreground": "#560bad", // SAME COLOR as struct, but not bold
+			"italic": true
+		},
+		"type.defaultLibrary": {
+			"foreground": "#3a0ca3", // Ultramarine - Deep blue-purple for standard types
+			"bold": true
+		},
+		"type": {
+			"foreground": "#3a0ca3", // Same as defaultLibrary but not bold
+			"italic": true
+		},
+
+		// Function System - Core Code Structure
+		"function": {
+			"foreground": "#3f37c9" // Purple Heart 6 - Rich blue-purple for function calls
+		},
+		"function.signature": {
+			"foreground": "#3f37c9" // Matching function calls
+		},
+		"function.definition": {
+			"foreground": "#3a0ca3", // Ultramarine - Slightly darker for definitions
+			"bold": true
+		},
+		"function.defaultLibrary": {
+			"foreground": "#7209b7", // Purple Heart - Medium purple for library functions
+			"bold": true
+		},
+		"function.builtin": {
+			"foreground": "#7209b7", // Purple Heart - Matching built-ins
+			"bold": true
+		},
+		"method": {
+			"foreground": "#4361ee" // Blue Ribbon - Bright blue for method calls
+		},
+		"method.signature": {
+			"foreground": "#4361ee", // Matching methods
+			"italic": true
+		},
+
+		//===========================================
+		// Error Handling & Control Flow - Critical in Go
+		//===========================================
+		"variable.error": {
+			"foreground": "#f72585", // Rose - Vivid pink for errors
+			"bold": true
+		},
+		"parameter.error": {
+			"foreground": "#f72585", // Rose - Matching error parameters
+			"bold": true,
+			"italic": true
+		},
+		"keyword": {
+			"foreground": "#B6914D", // Violet Eggplant - Other keywords
+			"bold": true
+		},
+
+		//===========================================
+		// Variable Styling
+		//===========================================
+		"variable.other": {
+			"foreground": "#4895ef", // Cornflower Blue - For basic variables
+			"italic": true
+		},
+		"variable.readonly": {
+			"foreground": "#f72585", // Rose - Constants stand out in pink
+			"bold": true
+		},
+		"variable.defaultLibrary": {
+			"foreground": "#10b981", // Purple Heart - Standard library vars
+			"bold": true
+		},
+		"variable.signature": {
+			"foreground": "#4361ee", // Blue Ribbon - Important declarations
+			"italic": true
+		},
+
+		//===========================================
+		// Go-Specific Reference Types
+		//===========================================
+		"variable.pointer": {
+			"foreground": "#4cc9f0", // Seagull - Light blue for pointers
+			"italic": true,
+			"underline": true
+		},
+		"variable.interface": {
+			"foreground": "#4361ee", // Blue Ribbon - Brighter blue for interfaces
+			"italic": true,
+			"underline": true
+		},
+		"variable.map": {
+			"foreground": "#4895ef", // Cornflower Blue - Medium blue for maps
+			"italic": true,
+			"underline": true
+		},
+		"variable.slice": {
+			"foreground": "#4cc9f0", // Seagull - Light blue for slices
+			"italic": true,
+			"underline": true
+		},
+
+		//===========================================
+		// Parameter Styling
+		//===========================================
+		"parameter": {
+			"foreground": "#3f37c9", // Purple Heart 6 - Blue-purple for parameters
+			"italic": true
+		},
+		"parameter.pointer": {
+			"foreground": "#4cc9f0", // Seagull - Matching pointer style
+			"italic": true,
+			"underline": true
+		},
+		"parameter.interface": {
+			"foreground": "#4361ee", // Blue Ribbon - Matching interface style
+			"italic": true,
+			"underline": true
+		},
+		"parameter.map": {
+			"foreground": "#4895ef", // Cornflower Blue - Matching map style
+			"italic": true,
+			"underline": true
+		},
+		"parameter.slice": {
+			"foreground": "#4cc9f0", // Seagull - Matching slice style
+			"italic": true,
+			"underline": true
+		},
+
+		//===========================================
+		// String & Comment Styling
+		//===========================================
+		"string": {
+			"foreground": "#f72585" // Rose - Vivid pink for strings
+		},
+		"string.format": {
+			"foreground": "#18a558", // Violet Eggplant - Format strings
+			"bold": true
+		},
+		"string.special": {
+			"foreground": "#B6914D", // Violet Eggplant - Special strings
+			"bold": true
+		},
+		"comment": {
+			"foreground": "#18a558", // NEW: Bright green for comments
+			"italic": true
+		},
+
+		//===========================================
+		// Green Elements for Status & Special Functions
+		//===========================================
+		"variable.success": {
+			"foreground": "#06d6a0", // NEW: Bright mint green for success vars
+			"bold": true
+		},
+		"decorator": {
+			"foreground": "#10b981", // NEW: Emerald green for decorators/annotations
+			"bold": true
+		},
+		"operator.special": {
+			"foreground": "#1db954", // NEW: Spotify green for special operators
+			"bold": true
+		},
+		"function.test": {
+			"foreground": "#06d6a0", // NEW: Bright mint green for test functions
+			"bold": true
+		},
+
+		//===========================================
+		// Other Elements
+		//===========================================
+		"namespace": {
+			"foreground": "#404040", // Purple Heart 3 - Deep purple for packages
+			"bold": true
+		},
+		"property": {
+			"foreground": "#4361ee" // Blue Ribbon - Blue for struct fields
+		},
+		"operator": {
+			"foreground": "#7209b7", // Purple Heart - Medium purple for operators
+			"bold": true
+		},
+		"variable.context": {
+			"foreground": "#2dc653", // NEW: Green for context variables
+			"italic": true,
+			"bold": true
+		},
+		"number": {
+			"foreground": "#06d6a0" // NEW: Bright mint green for numbers
+		},
+		"numeric": {
+			"foreground": "#06d6a0" // NEW: Matching numbers
+		}
+	},
+	"tokenColors": [
+		{
+			"name": "Comments",
+			"scope": ["comment", "punctuation.definition.comment"],
+			"settings": {
+				"fontStyle": "italic",
+				"foreground": "#AAAAAA"
+			}
+		},
+		{
+			"name": "Comments: Preprocessor",
+			"scope": "comment.block.preprocessor",
+			"settings": {
+				"fontStyle": "",
+				"foreground": "#AAAAAA"
+			}
+		},
+		{
+			"name": "Comments: Documentation",
+			"scope": ["comment.documentation", "comment.block.documentation"],
+			"settings": {
+				"foreground": "#448C27"
+			}
+		},
+		{
+			"name": "Invalid - Illegal",
+			"scope": "invalid.illegal",
+			"settings": {
+				"foreground": "#660000"
+			}
+		},
+		{
+			"name": "Operators",
+			"scope": "keyword.operator",
+			"settings": {
+				"foreground": "#777777"
+			}
+		},
+		{
+			"name": "Keywords",
+			"scope": ["keyword", "storage"],
+			"settings": {
+				"foreground": "#4B83CD"
+			}
+		},
+		{
+			"name": "Types",
+			"scope": ["storage.type", "support.type"],
+			"settings": {
+				"foreground": "#7A3E9D"
+			}
+		},
+		{
+			"name": "Language Constants",
+			"scope": ["constant.language", "support.constant", "variable.language"],
+			"settings": {
+				"foreground": "#AB6526"
+			}
+		},
+		{
+			"name": "Variables",
+			"scope": ["variable", "support.variable"],
+			"settings": {
+				"foreground": "#7A3E9D"
+			}
+		},
+		{
+			"name": "Functions",
+			"scope": ["entity.name.function", "support.function"],
+			"settings": {
+				"fontStyle": "bold",
+				"foreground": "#AA3731"
+			}
+		},
+		{
+			"name": "Classes",
+			"scope": ["entity.name.type", "entity.other.inherited-class", "support.class"],
+			"settings": {
+				"fontStyle": "bold",
+				"foreground": "#7A3E9D"
+			}
+		},
+		{
+			"name": "Exceptions",
+			"scope": "entity.name.exception",
+			"settings": {
+				"foreground": "#660000"
+			}
+		},
+		{
+			"name": "Sections",
+			"scope": "entity.name.section",
+			"settings": {
+				"fontStyle": "bold"
+			}
+		},
+		{
+			"name": "Numbers, Characters",
+			"scope": ["constant.numeric", "constant.character", "constant"],
+			"settings": {
+				"foreground": "#AB6526"
+			}
+		},
+		{
+			"name": "Strings",
+			"scope": "string",
+			"settings": {
+				"foreground": "#448C27"
+			}
+		},
+		{
+			"name": "Strings: Escape Sequences",
+			"scope": "constant.character.escape",
+			"settings": {
+				"foreground": "#777777"
+			}
+		},
+		{
+			"name": "Strings: Regular Expressions",
+			"scope": "string.regexp",
+			"settings": {
+				"foreground": "#4B83CD"
+			}
+		},
+		{
+			"name": "Strings: Symbols",
+			"scope": "constant.other.symbol",
+			"settings": {
+				"foreground": "#AB6526"
+			}
+		},
+		{
+			"name": "Punctuation",
+			"scope": "punctuation",
+			"settings": {
+				"foreground": "#777777"
+			}
+		},
+		{
+			"name": "HTML: Doctype Declaration",
+			"scope": [
+				"meta.tag.sgml.doctype",
+				"meta.tag.sgml.doctype string",
+				"meta.tag.sgml.doctype entity.name.tag",
+				"meta.tag.sgml punctuation.definition.tag.html"
+			],
+			"settings": {
+				"foreground": "#AAAAAA"
+			}
+		},
+		{
+			"name": "HTML: Tags",
+			"scope": [
+				"meta.tag",
+				"punctuation.definition.tag.html",
+				"punctuation.definition.tag.begin.html",
+				"punctuation.definition.tag.end.html"
+			],
+			"settings": {
+				"foreground": "#91B3E0"
+			}
+		},
+		{
+			"name": "HTML: Tag Names",
+			"scope": "entity.name.tag",
+			"settings": {
+				"foreground": "#4B83CD"
+			}
+		},
+		{
+			"name": "HTML: Attribute Names",
+			"scope": ["meta.tag entity.other.attribute-name", "entity.other.attribute-name.html"],
+			"settings": {
+				"fontStyle": "italic",
+				"foreground": "#91B3E0"
+			}
+		},
+		{
+			"name": "HTML: Entities",
+			"scope": ["constant.character.entity", "punctuation.definition.entity"],
+			"settings": {
+				"foreground": "#AB6526"
+			}
+		},
+		{
+			"name": "CSS: Selectors",
+			"scope": [
+				"meta.selector",
+				"meta.selector entity",
+				"meta.selector entity punctuation",
+				"entity.name.tag.css"
+			],
+			"settings": {
+				"foreground": "#7A3E9D"
+			}
+		},
+		{
+			"name": "CSS: Property Names",
+			"scope": ["meta.property-name", "support.type.property-name"],
+			"settings": {
+				"foreground": "#AB6526"
+			}
+		},
+		{
+			"name": "CSS: Property Values",
+			"scope": ["meta.property-value", "meta.property-value constant.other", "support.constant.property-value"],
+			"settings": {
+				"foreground": "#448C27"
+			}
+		},
+		{
+			"name": "CSS: Important Keyword",
+			"scope": "keyword.other.important",
+			"settings": {
+				"fontStyle": "bold"
+			}
+		},
+		{
+			"name": "Markup: Changed",
+			"scope": "markup.changed",
+			"settings": {
+				"foreground": "#000000"
+			}
+		},
+		{
+			"name": "Markup: Deletion",
+			"scope": "markup.deleted",
+			"settings": {
+				"foreground": "#000000"
+			}
+		},
+		{
+			"name": "Markup: Emphasis",
+			"scope": "markup.italic",
+			"settings": {
+				"fontStyle": "italic"
+			}
+		},
+		{
+			"name": "Markup: Error",
+			"scope": "markup.error",
+			"settings": {
+				"foreground": "#660000"
+			}
+		},
+		{
+			"name": "Markup: Insertion",
+			"scope": "markup.inserted",
+			"settings": {
+				"foreground": "#000000"
+			}
+		},
+		{
+			"name": "Markup: Link",
+			"scope": "meta.link",
+			"settings": {
+				"foreground": "#4B83CD"
+			}
+		},
+		{
+			"name": "Markup: Output",
+			"scope": ["markup.output", "markup.raw"],
+			"settings": {
+				"foreground": "#777777"
+			}
+		},
+		{
+			"name": "Markup: Prompt",
+			"scope": "markup.prompt",
+			"settings": {
+				"foreground": "#777777"
+			}
+		},
+		{
+			"name": "Markup: Heading",
+			"scope": "markup.heading",
+			"settings": {
+				"foreground": "#AA3731"
+			}
+		},
+		{
+			"name": "Markup: Strong",
+			"scope": "markup.bold",
+			"settings": {
+				"fontStyle": "bold"
+			}
+		},
+		{
+			"name": "Markup: Traceback",
+			"scope": "markup.traceback",
+			"settings": {
+				"foreground": "#660000"
+			}
+		},
+		{
+			"name": "Markup: Underline",
+			"scope": "markup.underline",
+			"settings": {
+				"fontStyle": "underline"
+			}
+		},
+		{
+			"name": "Markup Quote",
+			"scope": "markup.quote",
+			"settings": {
+				"foreground": "#7A3E9D"
+			}
+		},
+		{
+			"name": "Markup Lists",
+			"scope": "markup.list",
+			"settings": {
+				"foreground": "#4B83CD"
+			}
+		},
+		{
+			"name": "Markup Styling",
+			"scope": ["markup.bold", "markup.italic"],
+			"settings": {
+				"foreground": "#448C27"
+			}
+		},
+		{
+			"name": "Markup Inline",
+			"scope": "markup.inline.raw",
+			"settings": {
+				"fontStyle": "",
+				"foreground": "#AB6526"
+			}
+		},
+		{
+			"name": "Extra: Diff Range",
+			"scope": ["meta.diff.range", "meta.diff.index", "meta.separator"],
+			"settings": {
+				"foreground": "#434343"
+			}
+		},
+		{
+			"name": "Extra: Diff From",
+			"scope": "meta.diff.header.from-file",
+			"settings": {
+				"foreground": "#434343"
+			}
+		},
+		{
+			"name": "Extra: Diff To",
+			"scope": "meta.diff.header.to-file",
+			"settings": {
+				"foreground": "#434343"
+			}
+		}
+	]
+}
