@@ -2,9 +2,16 @@ inpackage: false
 with-expecter: true
 testonly: false
 exported: true
+dir: gen/mockery
 outpkg: mockery
 resolve-type-alias: false
 issue-845-fix: true
 filename: "{{.InterfaceName}}.{{.PackageName}}.mockery.go"
 mockname: Mock{{.InterfaceName}}_{{.PackageName}}
 packages: #generated
+    github.com/walteh/semantic-shift/pkg/colortheme:
+        interfaces:
+            Sample: {}
+    github.com/walteh/semantic-shift/pkg/designer:
+        interfaces:
+            SampleDesigner: {}

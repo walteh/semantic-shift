@@ -1,0 +1,8 @@
+version: '3'
+
+tasks:
+
+    task:
+        desc: run task - built from github.com/go-task/task/v3/cmd/task
+        cmds:
+            - ./go tool github.com/go-task/task/v3/cmd/task {{.CLI_ARGS}}
