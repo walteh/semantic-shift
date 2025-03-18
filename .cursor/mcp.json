@@ -35,8 +35,8 @@
 			"args": ["run", "-i", "--rm", "-q", "mcp/time"]
 		},
 		"task": {
-			"command": "go",
-			"args": ["run", "./cmd/taskmcp/main.go"]
+			"command": "./taskmcp",
+			"args": []
 		}
 	}
 }

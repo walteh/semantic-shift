@@ -41,7 +41,7 @@ func main() {
 	httpAddr := flag.String("addr", ":8080", "HTTP server address (only used with -http)")
 	taskfilePath := flag.String("taskfile", "", "Path to Taskfile.yaml (default: auto-detect)")
 	logFilePath := flag.String("log", "", "Path to log file (default: logs/taskmcp.log)")
-	logLevel := flag.String("log-level", "info", "Log level (trace, debug, info, warn, error, fatal, panic)")
+	logLevelStr := flag.String("log-level", "info", "Log level (trace, debug, info, warn, error, fatal, panic)")
 	flag.Parse()
 
 	// // Immediately suppress stdout for stdio mode
@@ -68,10 +68,10 @@ func main() {
 	}
 
 	// Set log level
-	level, err := zerolog.ParseLevel(*logLevel)
+	level, err := zerolog.ParseLevel(*logLevelStr)
 	if err != nil {
 		if *httpMode {
-			fmt.Printf("Invalid log level '%s', using 'info'\n", *logLevel)
+			fmt.Printf("Invalid log level '%s', using 'info'\n", *logLevelStr)
 		}
 		level = zerolog.InfoLevel
 	}
@@ -113,6 +113,9 @@ func main() {
 	s := server.NewMCPServer(
 		"TaskMCP",
 		"1.0.0",
+		server.WithToolCapabilities(true), // Enable tool capabilities
+		server.WithResourceCapabilities(true, false), // Enable resource capabilities
+		server.WithInstructions("TaskMCP allows you to run tasks from Taskfile.yaml as tools"),
 	)
 
 	registry := &TaskRegistry{
@@ -186,7 +189,33 @@ func main() {
 		// Create a standard library logger that writes to our custom writer
 		stdLogger := log.New(errorWriter, "", 0)
 
-		if err := server.ServeStdio(s, server.WithErrorLogger(stdLogger)); err != nil {
+		// Set up stdio server options
+		stdioOpts := []server.StdioOption{
+			server.WithErrorLogger(stdLogger),
+		}
+
+		// In stdio mode, make sure we restore stdout to normal before starting
+		// This ensures proper stdio communication
+		stdoutBackup := os.Stdout
+		stderrBackup := os.Stderr
+
+		// IMPORTANT: We need to fully restore stdout for proper stdio mode communication
+		// No writing to stdout from this point on except through the server itself
+		os.Stdout = stdoutBackup
+
+		// Set a better logging level for debug mode
+		if logLevel := os.Getenv("MCP_LOG_LEVEL"); logLevel != "" {
+			if level, err := zerolog.ParseLevel(logLevel); err == nil {
+				zerolog.SetGlobalLevel(level)
+				logger.Info().Str("log_level", level.String()).Msg("Set log level from environment")
+			}
+		}
+
+		// Start the stdio server - pass a descriptive server name
+		logger.Info().Msg("Starting ServeStdio - no more logging to stdout after this point")
+		if err := server.ServeStdio(s, stdioOpts...); err != nil {
+			// If there's an error, make sure we're logging to stderr only
+			os.Stdout = stderrBackup
 			logger.Fatal().Err(err).Msg("Server error")
 			os.Exit(1)
 		}
@@ -432,3 +461,5 @@ func extractVars(task *ast.Task) map[string]string {
 
 	return vars
 }
+
+// logWriter implements io.Writer interface for zerolog logging

@@ -22,9 +22,11 @@ type logWriter struct {
 
 // Write implements io.Writer
 func (w *logWriter) Write(p []byte) (n int, err error) {
-	// Remove trailing newlines for cleaner log output
-	msg := strings.TrimSuffix(string(p), "\n")
-	w.logger.Error().Msg(msg)
+	// Remove trailing newlines and spaces for cleaner log output
+	msg := strings.TrimSpace(string(p))
+	if msg != "" {
+		w.logger.Error().Msg(msg)
+	}
 	return len(p), nil
 }
 
