@@ -45,7 +45,7 @@
 		"editor.semanticTokenColorCustomizations": {
 			"enabled": true,
 			"[Cloud]": {
-				"enabled": false,
+				"enabled": true,
 				"rules": {
 					//===========================================
 					// Core Go Elements

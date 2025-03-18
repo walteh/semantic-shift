@@ -1,0 +1,38 @@
+{
+	"mcpServers": {
+		"git": {
+			"command": "docker",
+			"args": ["run", "--rm", "-q", "-i", "--mount", "type=bind,src=/tmp,dst=/tmp", "mcp/git"]
+		},
+		"sequentialthinking": {
+			"command": "docker",
+			"args": ["run", "--rm", "-q", "-i", "mcp/sequentialthinking"]
+		},
+
+		"memory": {
+			"command": "docker",
+			"args": ["run", "-i", "-v", "claude-memory:/app/dist", "--rm", "mcp/memory"]
+		},
+		"filesystem": {
+			"command": "docker",
+			"args": [
+				"run",
+				"-i",
+				"--rm",
+				"-q",
+				"--mount",
+				"type=bind,src=/tmp,dst=/projects/tmp",
+				"mcp/filesystem",
+				"/projects"
+			]
+		},
+		"fetch": {
+			"command": "docker",
+			"args": ["run", "-i", "--rm", "-q", "mcp/fetch", "--ignore-robots-txt"]
+		},
+		"time": {
+			"command": "docker",
+			"args": ["run", "-i", "--rm", "-q", "mcp/time"]
+		}
+	}
+}
