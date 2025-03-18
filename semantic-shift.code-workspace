@@ -41,7 +41,11 @@
 		]
 	},
 	"settings": {
-		// ... existing code ...
+		"gopls": {
+			"ui.semanticTokens": true
+		},
+		"editor.tokenColorCustomizations": {},
+		"editor.semanticHighlighting.enabled": true,
 		"editor.semanticTokenColorCustomizations": {
 			"enabled": true,
 			"[Cloud]": {
