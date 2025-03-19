@@ -1,21 +1,25 @@
-package color
+---
+description: 
+globs: cmd/json-schema-postprocess/*.go
+alwaysApply: false
+---
+we need to build a post processor for the file generated at [model.gen.go](mdc:root/root/cmd/json-schema-postprocess/postprocess/testdata/model.gen.go)
 
-import (
-	"encoding/json"
-	"fmt"
-)
+you will likely need to parse the schema directly using a lib, which you can find at [color.schema.json](mdc:root/root/cmd/json-schema-postprocess/postprocess/testdata/color.schema.json)
 
-// full new steps
-// step 1: find models in the schema that are just a list of anyOfs
-// step 2: check if there are any common string constants among the anyOfs
-// step 3: if there are constants, add an interface with a method that returns that string constant
-// step 4: implement the interface for each model
-// step 5: create parseUnknown function for each parent
-// step 6: create marshalJSON for each child
+(in a normal run both of these need to be passed in as arguments)
 
-// modifiying existing code
-// 1: remove the previously generated struct field from the generated struct (for the constants)
-// 2: modify the unmarshalJSON of needed types to use the new unknownParse functions
+we will create our file in a specifed (passed in arg) output dir 
+
+I have laid out the logic we need to move rhough the post processor with below
+
+all of the logic should be in the postprocess folder, but we need to make sure the main command is callable and runnable
+
+
+
+/////////////////////////////////////////////////////////////
+// step 0 - identify
+/////////////////////////////////////////////////////////////
 
 /// identify:
 // 1. schemas that entirly consist of a list of anyOfs (we will call these the "parents")
@@ -26,10 +30,6 @@ import (
 //    - the 'direct-parent-callers' that are direct children of the 'parents'
 //    - the 'array-parent-callers' that call the 'parents' as an array
 //    - the 'map-parent-callers' that call the 'parents' as a string map (this map thing may be a little out of scope for now)
-
-/////////////////////////////////////////////////////////////
-// step 0 - identify
-/////////////////////////////////////////////////////////////
 
 // ====================== no constant ========================
 
@@ -166,7 +166,7 @@ import (
 
 // ------------------------ remove --------------------------
 
-// type Palette interface{}
+type Palette interface{}
 
 // +++++++++++++++++++++++++ add ++++++++++++++++++++++++++++
 
@@ -185,7 +185,7 @@ type PaletteMap map[string]Palette
 // ====================== with constant ======================
 
 // ------------------------ remove --------------------------
-// type Color interface{}
+type Color interface{}
 
 // +++++++++++++++++++++++++ add ++++++++++++++++++++++++++++
 type Color interface {
@@ -352,7 +352,7 @@ type CategoricalPalette struct {
 	ColorScheme *ColorSchemeType `json:"colorScheme,omitempty" yaml:"colorScheme,omitempty" mapstructure:"colorScheme,omitempty"`
 
 	// ------------------------ remove --------------------------
-	// Colors []CategoricalPaletteColorsElem `json:"colors" yaml:"colors" mapstructure:"colors"`
+	Colors []CategoricalPaletteColorsElem `json:"colors" yaml:"colors" mapstructure:"colors"`
 
 	// +++++++++++++++++++++++++ add ++++++++++++++++++++++++++++
 	Colors ColorSlice `json:"colors" yaml:"colors" mapstructure:"colors"`
@@ -398,7 +398,7 @@ type ColorConfig struct {
 	Usage []string `json:"usage,omitempty" yaml:"usage,omitempty" mapstructure:"usage,omitempty"`
 
 	// ------------------------ remove --------------------------
-	// Value ColorConfigValue `json:"value" yaml:"value" mapstructure:"value"`
+	Value ColorConfigValue `json:"value" yaml:"value" mapstructure:"value"`
 
 	// +++++++++++++++++++++++++ add ++++++++++++++++++++++++++++
 	Value Color `json:"value" yaml:"value" mapstructure:"value"`
