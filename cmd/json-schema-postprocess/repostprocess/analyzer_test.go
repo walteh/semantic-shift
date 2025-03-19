@@ -6,95 +6,114 @@ import (
 )
 
 func TestSchemaAnalyzer_Identify(t *testing.T) {
-	// Get the test schema path
+	// Create analyzer for color schema
 	schemaPath := filepath.Join("testdata", "color", "color.schema.json")
-
-	// Create analyzer
 	analyzer, err := NewSchemaAnalyzer(schemaPath)
 	if err != nil {
 		t.Fatalf("Failed to create analyzer: %v", err)
 	}
 
-	// Run analysis
+	// Run the analysis
 	results, err := analyzer.Analyze()
 	if err != nil {
 		t.Fatalf("Failed to analyze schema: %v", err)
 	}
 
-	// Test: Identify schemas that entirely consist of a list of anyOfs (parents)
-	if len(results.Parents) == 0 {
-		t.Error("No parents found in the schema")
+	// Check the parents were correctly identified
+	if _, ok := results.Parents["Color"]; !ok {
+		t.Error("Expected Color parent not identified")
 	}
 
-	// Test: Check if Color is identified as a parent
-	color, exists := results.Parents["Color"]
-	if !exists {
-		t.Error("Color not identified as a parent")
+	if _, ok := results.Parents["Palette"]; !ok {
+		t.Error("Expected Palette parent not identified")
 	}
 
-	// Test: Identify references of each parent (children)
-	if len(color.Children) == 0 {
-		t.Error("Color has no children")
+	// Check that model field was correctly identified
+	colorInfo := results.Parents["Color"]
+	if colorInfo.ConstantField != "model" {
+		t.Errorf("Expected Color.ConstantField to be 'model', got '%s'", colorInfo.ConstantField)
+	}
+}
+
+func TestSchemaAnalyzer_SimpleSchema(t *testing.T) {
+	// Create analyzer for simple schema
+	schemaPath := filepath.Join("testdata", "simple", "simple.schema.json")
+	analyzer, err := NewSchemaAnalyzer(schemaPath)
+	if err != nil {
+		t.Fatalf("Failed to create analyzer: %v", err)
 	}
 
-	// Test: Identify if each child has a shared constant field
-	if color.ConstantField != "model" {
-		t.Errorf("Expected constant field 'model' for Color, got '%s'", color.ConstantField)
+	// Run the analysis
+	results, err := analyzer.Analyze()
+	if err != nil {
+		t.Fatalf("Failed to analyze schema: %v", err)
 	}
 
-	// Test: Check constant values
-	if len(color.ConstantValues) == 0 {
-		t.Error("No constant values found for Color children")
+	// Check the parents were correctly identified
+	if _, ok := results.Parents["Shape"]; !ok {
+		t.Error("Expected Shape parent not identified")
 	}
 
-	// Test: Identify specific children
-	expectedChildren := []string{"HSLValue", "HSVValue", "HSIValue", "RGBValue", "RGBAValue", "LABValue", "LCHValue", "CMYKValue"}
-	for _, expectedChild := range expectedChildren {
+	// Check that type field was correctly identified
+	shapeInfo := results.Parents["Shape"]
+	if shapeInfo.ConstantField != "type" {
+		t.Errorf("Expected Shape.ConstantField to be 'type', got '%s'", shapeInfo.ConstantField)
+	}
+
+	// Check children
+	expectedChildren := []string{"Circle", "Square", "Triangle"}
+	for _, child := range expectedChildren {
 		found := false
-		for _, child := range color.Children {
-			if child == expectedChild {
+		for _, actualChild := range shapeInfo.Children {
+			if actualChild == child {
 				found = true
 				break
 			}
 		}
 		if !found {
-			t.Errorf("Expected child %s not found in Color children", expectedChild)
+			t.Errorf("Expected child %s not found in Shape children", child)
 		}
 	}
 
-	// Test: Check Palette (a parent without constant fields)
-	if _, exists := results.Parents["Palette"]; !exists {
-		t.Error("Palette not identified as a parent")
+	// Check constant values
+	expectedValues := map[string]string{
+		"Circle":   "circle",
+		"Square":   "square",
+		"Triangle": "triangle",
 	}
 
-	// Test: Identify parent callers
-	if len(results.ParentCallers) == 0 {
-		t.Error("No parent callers found in the schema")
+	for child, expectedValue := range expectedValues {
+		actualValue, ok := shapeInfo.ConstantValues[child]
+		if !ok {
+			t.Errorf("No constant value found for %s", child)
+			continue
+		}
+		if actualValue != expectedValue {
+			t.Errorf("Expected constant value for %s to be '%s', got '%s'",
+				child, expectedValue, actualValue)
+		}
 	}
 
-	// Test: Check direct parent callers
-	if len(results.DirectParentCallers) == 0 {
-		t.Error("No direct parent callers found")
+	// Check parent callers
+	directCallerFound := false
+	for _, caller := range results.DirectParentCallers {
+		if caller.Name == "SimpleSchemaJsonConfig" && caller.Field == "shape" && caller.ParentRef == "Shape" {
+			directCallerFound = true
+			break
+		}
+	}
+	if !directCallerFound {
+		t.Error("Expected direct parent caller SimpleSchemaJsonConfig.shape not found")
 	}
 
-	// Test: Check array parent callers
-	if len(results.ArrayParentCallers) == 0 {
-		t.Error("No array parent callers found")
+	arrayCallerFound := false
+	for _, caller := range results.ArrayParentCallers {
+		if caller.Name == "SimpleSchemaJson" && caller.Field == "shapes" && caller.ParentRef == "Shape" {
+			arrayCallerFound = true
+			break
+		}
 	}
-
-	// Check specific parent-caller relationships
-	colorConfig, exists := results.DirectParentCallers["ColorConfig.value"]
-	if !exists {
-		t.Error("ColorConfig.value not identified as direct parent caller for Color")
-	} else if colorConfig.ParentRef != "Color" {
-		t.Errorf("ColorConfig.value references %s, expected Color", colorConfig.ParentRef)
-	}
-
-	// Check for array parent caller
-	categoricalPalette, exists := results.ArrayParentCallers["CategoricalPalette.colors"]
-	if !exists {
-		t.Error("CategoricalPalette.colors not identified as array parent caller")
-	} else if categoricalPalette.ParentRef != "Color" {
-		t.Errorf("CategoricalPalette.colors references %s, expected Color", categoricalPalette.ParentRef)
+	if !arrayCallerFound {
+		t.Error("Expected array parent caller SimpleSchemaJson.shapes not found")
 	}
 }

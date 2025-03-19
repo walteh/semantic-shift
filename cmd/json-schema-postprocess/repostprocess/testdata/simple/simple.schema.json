@@ -1,0 +1,80 @@
+{
+	"$schema": "http://json-schema.org/schema#",
+	"title": "Simple Schema",
+	"type": "object",
+	"properties": {
+		"config": {
+			"type": "object",
+			"properties": {
+				"shape": {
+					"$ref": "#/definitions/Shape"
+				}
+			},
+			"required": ["shape"]
+		},
+		"shapes": {
+			"type": "array",
+			"items": {
+				"$ref": "#/definitions/Shape"
+			}
+		}
+	},
+	"definitions": {
+		"Shape": {
+			"type": "object",
+			"anyOf": [
+				{
+					"$ref": "#/definitions/Circle"
+				},
+				{
+					"$ref": "#/definitions/Square"
+				},
+				{
+					"$ref": "#/definitions/Triangle"
+				}
+			]
+		},
+		"Circle": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "circle"
+				},
+				"radius": {
+					"type": "number"
+				}
+			},
+			"required": ["type", "radius"]
+		},
+		"Square": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "square"
+				},
+				"side": {
+					"type": "number"
+				}
+			},
+			"required": ["type", "side"]
+		},
+		"Triangle": {
+			"type": "object",
+			"properties": {
+				"type": {
+					"type": "string",
+					"const": "triangle"
+				},
+				"base": {
+					"type": "number"
+				},
+				"height": {
+					"type": "number"
+				}
+			},
+			"required": ["type", "base", "height"]
+		}
+	}
+}
