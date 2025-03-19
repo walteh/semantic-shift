@@ -3,9 +3,12 @@ description:
 globs: cmd/json-schema-postprocess/*.go
 alwaysApply: false
 ---
-we need to build a post processor for the file generated at [model.gen.go](mdc:root/root/cmd/json-schema-postprocess/postprocess/testdata/model.gen.go)
+build all the tests and functional skeletons first 
 
-you will likely need to parse the schema directly using a lib, which you can find at [color.schema.json](mdc:root/root/cmd/json-schema-postprocess/postprocess/testdata/color.schema.json)
+
+we need to build a post processor for the file generated at [model.gen.go](mdc:root/root/root/cmd/json-schema-postprocess/postprocess/testdata/model.gen.go)
+
+you will likely need to parse the schema directly using a lib, which you can find at [color.schema.json](mdc:root/root/root/cmd/json-schema-postprocess/postprocess/testdata/color.schema.json)
 
 (in a normal run both of these need to be passed in as arguments)
 

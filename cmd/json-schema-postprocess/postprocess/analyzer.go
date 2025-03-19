@@ -266,26 +266,66 @@ func (sa *SchemaAnalyzer) Analyze() (*SchemaResults, error) {
 			// Check for array reference
 			items, ok := propMap["items"].(map[string]interface{})
 			if ok {
-				itemRef, ok := items["$ref"].(string)
-				if ok {
-					refName := extractRefName(itemRef)
-					if _, isParent := results.Parents[refName]; isParent {
-						// This is an array parent caller
-						caller := ParentCallerInfo{
-							Name:        defName,
-							Field:       propName,
-							ParentRef:   refName,
-							IsArray:     true,
-							IsRequired:  required[propName],
-							ParentNames: []string{refName},
+				// Check for nested array
+				if nestedItems, ok := items["items"].(map[string]interface{}); ok {
+					// This is a nested array
+					if itemRef, ok := nestedItems["$ref"].(string); ok {
+						refName := extractRefName(itemRef)
+						if _, isParent := results.Parents[refName]; isParent {
+							// This is a nested array parent caller
+							caller := ParentCallerInfo{
+								Name:        defName,
+								Field:       propName,
+								ParentRef:   refName,
+								IsArray:     true,
+								IsRequired:  required[propName],
+								ParentNames: []string{refName},
+							}
+							results.ParentCallers[defName+"."+propName] = caller
+							results.ArrayParentCallers[defName+"."+propName] = caller
 						}
-						results.ParentCallers[defName+"."+propName] = caller
-						results.ArrayParentCallers[defName+"."+propName] = caller
+					}
+				} else {
+					// Check for single array reference
+					if itemRef, ok := items["$ref"].(string); ok {
+						refName := extractRefName(itemRef)
+						if _, isParent := results.Parents[refName]; isParent {
+							// This is an array parent caller
+							caller := ParentCallerInfo{
+								Name:        defName,
+								Field:       propName,
+								ParentRef:   refName,
+								IsArray:     true,
+								IsRequired:  required[propName],
+								ParentNames: []string{refName},
+							}
+							results.ParentCallers[defName+"."+propName] = caller
+							results.ArrayParentCallers[defName+"."+propName] = caller
+						}
 					}
 				}
 			}
 
-			// Could add map reference check here for future use
+			// Check for map reference
+			additionalProperties, ok := propMap["additionalProperties"].(map[string]interface{})
+			if ok {
+				if itemRef, ok := additionalProperties["$ref"].(string); ok {
+					refName := extractRefName(itemRef)
+					if _, isParent := results.Parents[refName]; isParent {
+						// This is a map parent caller
+						caller := ParentCallerInfo{
+							Name:        defName,
+							Field:       propName,
+							ParentRef:   refName,
+							IsMap:       true,
+							IsRequired:  required[propName],
+							ParentNames: []string{refName},
+						}
+						results.ParentCallers[defName+"."+propName] = caller
+						results.MapParentCallers[defName+"."+propName] = caller
+					}
+				}
+			}
 		}
 	}
 
