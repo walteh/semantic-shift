@@ -71,7 +71,7 @@ func (cg *CodeGenerator) generateInterfaces() error {
 		// Add constant field method if present
 		if info.ConstantField != "" {
 			constFieldName := strings.Title(info.ConstantField)
-			buf.WriteString(fmt.Sprintf("\t%s() %sType\n", constFieldName, parentName))
+			buf.WriteString(fmt.Sprintf("\t%s() %sModel\n", constFieldName, parentName))
 		}
 
 		buf.WriteString("}\n\n")
@@ -82,8 +82,18 @@ func (cg *CodeGenerator) generateInterfaces() error {
 		buf.WriteString(fmt.Sprintf("// %sMap is a map of %s interfaces\n", parentName, parentName))
 		buf.WriteString(fmt.Sprintf("type %sMap map[string]%s\n\n", parentName, parentName))
 
+		// Track which implementation methods we've written to avoid duplicates
+		written := make(map[string]bool)
+
 		// Add implementation methods for each child
 		for _, childName := range info.Children {
+			// Skip if we've already written this implementation
+			implKey := childName + ".is" + parentName
+			if written[implKey] {
+				continue
+			}
+			written[implKey] = true
+
 			// Add the interface implementation method
 			buf.WriteString(fmt.Sprintf("// is%s implements the %s interface\n", parentName, parentName))
 			buf.WriteString(fmt.Sprintf("func (me *%s) is%s() {}\n\n", childName, parentName))
@@ -91,11 +101,17 @@ func (cg *CodeGenerator) generateInterfaces() error {
 			// Add constant field implementation if present
 			if info.ConstantField != "" {
 				constFieldName := strings.Title(info.ConstantField)
-				constValue := info.ConstantValues[childName]
+				constValue, ok := info.ConstantValues[childName]
 
-				if constValue != "" {
+				if ok && constValue != "" {
+					methodKey := childName + "." + constFieldName
+					if written[methodKey] {
+						continue
+					}
+					written[methodKey] = true
+
 					sanitizedValue := sanitizeIdentifier(constValue)
-					typeName := fmt.Sprintf("%sType", parentName)
+					typeName := fmt.Sprintf("%sModel", parentName)
 					constName := fmt.Sprintf("%s%s", typeName, strings.Title(sanitizedValue))
 
 					buf.WriteString(fmt.Sprintf("// %s returns the %s type constant\n", constFieldName, parentName))
@@ -107,14 +123,22 @@ func (cg *CodeGenerator) generateInterfaces() error {
 
 		// If we have a constant field, add a type and constants for the values
 		if info.ConstantField != "" {
-			typeName := fmt.Sprintf("%sType", parentName)
+			typeName := fmt.Sprintf("%sModel", parentName)
 			buf.WriteString(fmt.Sprintf("// %s represents the %s model type\n", typeName, info.ConstantField))
 			buf.WriteString(fmt.Sprintf("type %s string\n\n", typeName))
 
 			buf.WriteString("// Constants for the different model types\n")
 			buf.WriteString("const (\n")
 
+			// Track constants to avoid duplicates
+			constWritten := make(map[string]bool)
+
 			for _, constValue := range info.ConstantValues {
+				if constWritten[constValue] {
+					continue
+				}
+				constWritten[constValue] = true
+
 				sanitizedValue := sanitizeIdentifier(constValue)
 				constName := fmt.Sprintf("%s%s", typeName, strings.Title(sanitizedValue))
 				buf.WriteString(fmt.Sprintf("\t%s %s = \"%s\"\n", constName, typeName, constValue))
@@ -170,7 +194,7 @@ func (cg *CodeGenerator) generateUnmarshalFunctions() error {
 		if info.ConstantField != "" {
 			buf.WriteString(fmt.Sprintf("\t// Use the %s field to determine the type\n", info.ConstantField))
 			buf.WriteString("\ttype Plain struct {\n")
-			buf.WriteString(fmt.Sprintf("\t\t%s %sType `json:\"%s\" yaml:\"%s\" mapstructure:\"%s\"`\n",
+			buf.WriteString(fmt.Sprintf("\t\t%s %sModel `json:\"%s\" yaml:\"%s\" mapstructure:\"%s\"`\n",
 				strings.Title(info.ConstantField), parentName, info.ConstantField, info.ConstantField, info.ConstantField))
 			buf.WriteString("\t}\n")
 			buf.WriteString("\tvar plain Plain\n")
@@ -183,7 +207,7 @@ func (cg *CodeGenerator) generateUnmarshalFunctions() error {
 			// Add a case for each child
 			for childName, constValue := range info.ConstantValues {
 				sanitizedValue := sanitizeIdentifier(constValue)
-				constName := fmt.Sprintf("%sType%s", parentName, strings.Title(sanitizedValue))
+				constName := fmt.Sprintf("%sModel%s", parentName, strings.Title(sanitizedValue))
 
 				buf.WriteString(fmt.Sprintf("\tcase %s:\n", constName))
 				buf.WriteString(fmt.Sprintf("\t\tvar %s %s\n", camelCase(childName), childName))
@@ -227,7 +251,7 @@ func (cg *CodeGenerator) generateUnmarshalFunctions() error {
 				buf.WriteString("\t// Add the constant field to the output\n")
 				buf.WriteString(fmt.Sprintf("\ttype Plain %s\n", childName))
 				buf.WriteString("\tmyMarshal := struct {\n")
-				buf.WriteString(fmt.Sprintf("\t\t%s %sType `json:\"%s\" yaml:\"%s\" mapstructure:\"%s\"`\n",
+				buf.WriteString(fmt.Sprintf("\t\t%s %sModel `json:\"%s\" yaml:\"%s\" mapstructure:\"%s\"`\n",
 					strings.Title(info.ConstantField), parentName, info.ConstantField, info.ConstantField, info.ConstantField))
 				buf.WriteString("\t\tPlain\n")
 				buf.WriteString("\t}{\n")
@@ -447,16 +471,12 @@ func (cg *CodeGenerator) generateEnhancedModel() error {
 						}
 					}
 
-					// Check if this field is an array element or direct reference to a parent
-					isModified := false
-
-					// Check for array parent callers
+					// Check for field modifications
 					for _, caller := range cg.results.ArrayParentCallers {
 						if caller.Name == typeSpec.Name.Name && (caller.Field == fieldName || caller.Field == jsonTag) {
 							// Modify the field type to use the parent slice type
 							if _, ok := field.Type.(*ast.ArrayType); ok {
 								field.Type = &ast.Ident{Name: caller.ParentRef + "Slice"}
-								isModified = true
 							}
 						}
 					}
@@ -466,16 +486,11 @@ func (cg *CodeGenerator) generateEnhancedModel() error {
 						if caller.Name == typeSpec.Name.Name && (caller.Field == fieldName || caller.Field == jsonTag) {
 							// Modify the field type to use the parent interface type
 							field.Type = &ast.Ident{Name: caller.ParentRef}
-							isModified = true
 						}
 					}
 
-					// Add the field if it wasn't modified to remove it
-					if !isModified {
-						newFields = append(newFields, field)
-					} else {
-						newFields = append(newFields, field)
-					}
+					// Add the field
+					newFields = append(newFields, field)
 				}
 				structType.Fields.List = newFields
 			}

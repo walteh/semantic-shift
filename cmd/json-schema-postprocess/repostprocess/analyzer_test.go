@@ -7,7 +7,7 @@ import (
 
 func TestSchemaAnalyzer_Identify(t *testing.T) {
 	// Get the test schema path
-	schemaPath := filepath.Join("testdata", "color.schema.json")
+	schemaPath := filepath.Join("testdata", "color", "color.schema.json")
 
 	// Create analyzer
 	analyzer, err := NewSchemaAnalyzer(schemaPath)

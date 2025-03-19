@@ -7,7 +7,7 @@ DO NOT HARD CODE STRINGS WHEN BUILDING GENERATORS UNLESS EXPLICIT CONSENT HAS BE
 
 # testing 
 all code should be written in a way that is testable and verifyable 
-code can be written before tests, but [golang-testing.mdc](mdc:root/root/root/root/root/root/.cursor/rules/golang-testing.mdc) should be in the back of our minds
+code can be written before tests, but [golang-testing.mdc](mdc:root/root/root/root/root/root/root/root/.cursor/rules/golang-testing.mdc) should be in the back of our minds
 
 # imports:
 always assume that broken imports are because the reference need to be adjusted, not because the thing being referenced doesn't exist

@@ -3,15 +3,17 @@ package repostprocess
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestCodeGenerator_Generate(t *testing.T) {
 	// Set up paths
-	schemaPath := filepath.Join("testdata", "color.schema.json")
-	modelPath := filepath.Join("testdata", "model.gen.go")
-	outputDir := filepath.Join("testdata", "output")
+	schemaPath := filepath.Join("testdata", "color", "color.schema.json")
+	modelPath := filepath.Join("testdata", "color", "model.gen.go")
 
+	tmpDir := t.TempDir()
+	outputDir := filepath.Join(tmpDir, "output")
 	// Ensure output directory exists
 	err := os.MkdirAll(outputDir, 0755)
 	if err != nil {
@@ -107,5 +109,5 @@ func checkForContent(t *testing.T, content, expected string) {
 }
 
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && s[len(s)-len(substr):] == substr || len(s) >= len(substr) && s[:len(substr)] == substr || len(s) >= len(substr) && s[len(s)/2-len(substr)/2:len(s)/2+len(substr)/2+(len(substr)%2)] == substr
+	return strings.Contains(s, substr)
 }

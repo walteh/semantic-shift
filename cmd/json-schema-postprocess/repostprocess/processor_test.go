@@ -8,12 +8,11 @@ import (
 
 func TestProcessor_Process(t *testing.T) {
 	// Set up paths
-	schemaPath := filepath.Join("testdata", "color.schema.json")
-	modelPath := filepath.Join("testdata", "model.gen.go")
-	outputDir := filepath.Join("testdata", "output")
+	schemaPath := filepath.Join("testdata", "color", "color.schema.json")
+	modelPath := filepath.Join("testdata", "color", "model.gen.go")
+	tmpDir := t.TempDir()
+	outputDir := filepath.Join(tmpDir, "output")
 
-	// Ensure output directory exists and is clean
-	_ = os.RemoveAll(outputDir)
 	err := os.MkdirAll(outputDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create output directory: %v", err)
