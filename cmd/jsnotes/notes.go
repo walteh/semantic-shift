@@ -1,0 +1,456 @@
+package color
+
+import (
+	"encoding/json"
+	"fmt"
+)
+
+// full new steps
+// step 1: find models in the schema that are just a list of anyOfs
+// step 2: check if there are any common string constants among the anyOfs
+// step 3: if there are constants, add an interface with a method that returns that string constant
+// step 4: implement the interface for each model
+// step 5: create parseUnknown function for each parent
+// step 6: create marshalJSON for each child
+
+// modifiying existing code
+// 1: remove the previously generated struct field from the generated struct (for the constants)
+// 2: modify the unmarshalJSON of needed types to use the new unknownParse functions
+
+/// identify:
+// 1. schemas that entirly consist of a list of anyOfs (we will call these the "parents")
+// 2. the references of each parent, we will call these the "children"
+// 3. identify if each child of a given parent has a shared 'const' string field all with the same name, we will call these the "constant-fields"
+// 4. the schemas that refer to our direct 'parents' - we will call these the "parent-callers"
+// 5. differeentiate the 'parent-callers' into two groups:
+//    - the 'direct-parent-callers' that are direct children of the 'parents'
+//    - the 'array-parent-callers' that call the 'parents' as an array
+//    - the 'map-parent-callers' that call the 'parents' as a string map (this map thing may be a little out of scope for now)
+
+/////////////////////////////////////////////////////////////
+// step 0 - identify
+/////////////////////////////////////////////////////////////
+
+// ====================== no constant ========================
+
+/*
+	"Palette": {
+		"anyOf": [
+			{ "$ref": "#/definitions/CategoricalPalette" },
+			{ "$ref": "#/definitions/DiscreteScalePalette" },
+			{ "$ref": "#/definitions/ContinuousScalePalette" },
+			{ "$ref": "#/definitions/MatrixPalette" }
+		]
+	},
+
+	"CategoricalPalette": {
+		"properties": {
+			// no common 'const' fields
+		},
+	},
+	"MatrixPalette": {
+		"properties": {
+			// no common 'const' fields
+		},
+	},
+	"AssetPack": {
+			"additionalProperties": false,
+			"properties": {
+				"brandName": {
+					"type": "string"
+				},
+				"palettes": {
+					"items": {
+						"$ref": "#/definitions/Palette"
+					},
+					"type": "array"
+				}
+			},
+			"required": ["brandName", "palettes"],
+			"type": "object"
+	},
+*/
+
+// in this case:
+// parent: Palette
+// children: CategoricalPalette, DiscreteScalePalette, ContinuousScalePalette, MatrixPalette
+// constant-fields: none
+// parent-callers: AssetPack (field=palettes, required=true)
+// direct-parent-callers: none
+// array-parent-callers: AssetPack (field=palettes, required=true)
+// map-parent-callers: none
+
+// ====================== with constant ======================
+
+/*
+	"Color": {
+		"anyOf": [
+			{ "$ref": "#/definitions/HSLValue" },
+			{ "$ref": "#/definitions/HSVValue" },
+			{ "$ref": "#/definitions/HSIValue" },
+			{ "$ref": "#/definitions/RGBValue" },
+			{ "$ref": "#/definitions/RGBAValue" },
+			{ "$ref": "#/definitions/LABValue" },
+			{ "$ref": "#/definitions/LCHValue" },
+			{ "$ref": "#/definitions/CMYKValue" }
+		]
+	},
+
+
+	"CMYKValue": {
+			"properties": {
+				...
+				"model": {
+					"const": "cmyk",
+					"type": "string"
+				},
+				...
+			},
+			"required": ["model", ...],
+			"type": "object"
+		},
+
+		"LCHValue": {
+			"properties": {
+				...
+				"model": {
+					"const": "lch",
+					"type": "string"
+				},
+				...
+			},
+			"required": ["model", ...],
+			"type": "object"
+		},
+
+			"ColorConfig": {
+			"additionalProperties": false,
+			"properties": {
+				"id": {
+					"type": "string"
+				},
+				"name": {
+					"type": "string"
+				},
+				"undertone": {
+					"$ref": "#/definitions/Undertone"
+				},
+				"usage": {
+					"items": {
+						"type": "string"
+					},
+					"type": "array"
+				},
+				"value": {
+					"$ref": "#/definitions/Color"
+				}
+			},
+			"required": ["value"],
+			"type": "object"
+		},
+*/
+
+// in this case:
+// parent: Color
+// children: HSLValue, HSVValue, HSIValue, RGBValue, RGBAValue, LABValue, LCHValue, CMYKValue
+// constant-fields: model
+// direct-parent-callers: ColorConfig (field=value, required=true)
+// array-parent-callers: none
+// map-parent-callers: none
+
+/////////////////////////////////////////////////////////////
+// step 1
+/////////////////////////////////////////////////////////////
+
+// ====================== no constant ========================
+
+// ------------------------ remove --------------------------
+
+// type Palette interface{}
+
+// +++++++++++++++++++++++++ add ++++++++++++++++++++++++++++
+
+type Palette interface {
+	isPalette()
+}
+
+func (me *CategoricalPalette) isPalette()     {}
+func (me *DiscreteScalePalette) isPalette()   {}
+func (me *ContinuousScalePalette) isPalette() {}
+func (me *MatrixPalette) isPalette()          {}
+
+type PaletteSlice []Palette
+type PaletteMap map[string]Palette
+
+// ====================== with constant ======================
+
+// ------------------------ remove --------------------------
+// type Color interface{}
+
+// +++++++++++++++++++++++++ add ++++++++++++++++++++++++++++
+type Color interface {
+	isColor()
+	Model() ColorModel
+}
+
+type ColorSlice []Color
+type ColorMap map[string]Color
+
+func (me *LCHValue) isColor()  {}
+func (me *LABValue) isColor()  {}
+func (me *HSVValue) isColor()  {}
+func (me *HSLValue) isColor()  {}
+func (me *RGBAValue) isColor() {}
+func (me *RGBValue) isColor()  {}
+func (me *CMYKValue) isColor() {}
+func (me *HSIValue) isColor()  {}
+
+type ColorModel string
+
+const (
+	ColorModelHsl  ColorModel = "hsl"
+	ColorModelHsv  ColorModel = "hsv"
+	ColorModelHsi  ColorModel = "hsi"
+	ColorModelRgb  ColorModel = "rgb"
+	ColorModelRgba ColorModel = "rgba"
+	ColorModelLab  ColorModel = "lab"
+	ColorModelLch  ColorModel = "lch"
+	ColorModelCmyk ColorModel = "cmyk"
+)
+
+func (me *LCHValue) Model() ColorModel  { return ColorModelLch }
+func (me *LABValue) Model() ColorModel  { return ColorModelLab }
+func (me *HSVValue) Model() ColorModel  { return ColorModelHsv }
+func (me *HSLValue) Model() ColorModel  { return ColorModelHsl }
+func (me *RGBAValue) Model() ColorModel { return ColorModelRgba }
+func (me *RGBValue) Model() ColorModel  { return ColorModelRgb }
+func (me *CMYKValue) Model() ColorModel { return ColorModelCmyk }
+func (me *HSIValue) Model() ColorModel  { return ColorModelHsi }
+
+/////////////////////////////////////////////////////////////
+// step 2
+/////////////////////////////////////////////////////////////
+
+// for each 'parent' type, create a 'parseUnknown' function
+
+// ====================== no constant ========================
+
+func parseUnknownPalette(b interface{}) (Palette, error) {
+
+	str, err := json.Marshal(b)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := []Palette{
+		&CategoricalPalette{},
+		&DiscreteScalePalette{},
+		&ContinuousScalePalette{},
+		&MatrixPalette{},
+	}
+
+	for _, opt := range opts {
+		err = json.Unmarshal(str, opt)
+		if err == nil {
+			return opt, nil
+		}
+	}
+
+	return nil, fmt.Errorf("invalid color")
+}
+
+// ====================== with constant ======================
+
+func parseUnknownColor(b interface{}) (Color, error) {
+
+	str, err := json.Marshal(b)
+	if err != nil {
+		return nil, err
+	}
+
+	type Plain struct {
+		Model ColorModel `json:"model" yaml:"model" mapstructure:"model"`
+	}
+	var plain Plain
+	if err := json.Unmarshal(str, &plain); err != nil {
+		return nil, err
+	}
+
+	switch plain.Model {
+	case ColorModelLch:
+		var lch LCHValue
+		err = json.Unmarshal(str, &lch)
+		return &lch, err
+	case ColorModelLab:
+		var lab LABValue
+		err = json.Unmarshal(str, &lab)
+		return &lab, err
+	case ColorModelHsv:
+		var hsv HSVValue
+		err = json.Unmarshal(str, &hsv)
+		return &hsv, err
+	case ColorModelHsl:
+		var hsl HSLValue
+		err = json.Unmarshal(str, &hsl)
+		return &hsl, err
+	case ColorModelRgba:
+		var rgba RGBAValue
+		err = json.Unmarshal(str, &rgba)
+		return &rgba, err
+	case ColorModelRgb:
+		var rgb RGBValue
+		err = json.Unmarshal(str, &rgb)
+		return &rgb, err
+	case ColorModelCmyk:
+		var cmyk CMYKValue
+		err = json.Unmarshal(str, &cmyk)
+		return &cmyk, err
+	case ColorModelHsi:
+		var hsi HSIValue
+		err = json.Unmarshal(str, &hsi)
+		return &hsi, err
+	default:
+		return nil, fmt.Errorf("invalid model: %s", plain.Model)
+	}
+}
+
+/////////////////////////////////////////////////////////////
+// step 3
+/////////////////////////////////////////////////////////////
+
+// for each child type, create a 'MarshalJSON' override function that adds the constant field to the output
+
+func (j LCHValue) MarshalJSON() ([]byte, error) {
+	// we need to add the constant field to the output
+	type Plain LCHValue
+	myMarshal := struct {
+		Model ColorModel `json:"model" yaml:"model" mapstructure:"model"`
+		Plain
+	}{
+		Model: j.Model(),
+		Plain: Plain(j),
+	}
+	return json.Marshal(myMarshal)
+}
+
+/////////////////////////////////////////////////////////////
+// step 4
+/////////////////////////////////////////////////////////////
+
+// adjust the names of direct, non array or map 'parent-callers'
+
+// ====================== array-parent-callers ===============
+
+// ------------------------ remove --------------------------
+
+// type CategoricalPaletteColorsElem interface{}
+
+// ...................... keep existing ......................
+
+type CategoricalPalette struct {
+	// ColorScheme corresponds to the JSON schema field "colorScheme".
+	ColorScheme *ColorSchemeType `json:"colorScheme,omitempty" yaml:"colorScheme,omitempty" mapstructure:"colorScheme,omitempty"`
+
+	// ------------------------ remove --------------------------
+	// Colors []CategoricalPaletteColorsElem `json:"colors" yaml:"colors" mapstructure:"colors"`
+
+	// +++++++++++++++++++++++++ add ++++++++++++++++++++++++++++
+	Colors ColorSlice `json:"colors" yaml:"colors" mapstructure:"colors"`
+
+	// Description corresponds to the JSON schema field "description".
+	Description *string `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
+
+	// Id corresponds to the JSON schema field "id".
+	Id *string `json:"id,omitempty" yaml:"id,omitempty" mapstructure:"id,omitempty"`
+
+	// Name corresponds to the JSON schema field "name".
+	Name string `json:"name" yaml:"name" mapstructure:"name"`
+
+	// Semantic corresponds to the JSON schema field "semantic".
+	Semantic *string `json:"semantic" yaml:"semantic" mapstructure:"semantic"`
+
+	// Type corresponds to the JSON schema field "type".
+	Type string `json:"type" yaml:"type" mapstructure:"type"`
+
+	// Usage corresponds to the JSON schema field "usage".
+	Usage []string `json:"usage,omitempty" yaml:"usage,omitempty" mapstructure:"usage,omitempty"`
+}
+
+// ====================== direct-parent-callers ==============
+
+// ------------------------ remove --------------------------
+
+// type ColorConfigValue interface{}
+
+// ...................... keep existing ......................
+
+type ColorConfig struct {
+	// Id corresponds to the JSON schema field "id".
+	Id *string `json:"id,omitempty" yaml:"id,omitempty" mapstructure:"id,omitempty"`
+
+	// Name corresponds to the JSON schema field "name".
+	Name *string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
+
+	// Undertone corresponds to the JSON schema field "undertone".
+	Undertone *Undertone `json:"undertone,omitempty" yaml:"undertone,omitempty" mapstructure:"undertone,omitempty"`
+
+	// Usage corresponds to the JSON schema field "usage".
+	Usage []string `json:"usage,omitempty" yaml:"usage,omitempty" mapstructure:"usage,omitempty"`
+
+	// ------------------------ remove --------------------------
+	// Value ColorConfigValue `json:"value" yaml:"value" mapstructure:"value"`
+
+	// +++++++++++++++++++++++++ add ++++++++++++++++++++++++++++
+	Value Color `json:"value" yaml:"value" mapstructure:"value"`
+}
+
+/////////////////////////////////////////////////////////////
+// step 5
+/////////////////////////////////////////////////////////////
+
+// for each 'parent-caller' type, 'modify' the existing 'UnmarshalJSON' function to use the 'parseUnknown' function
+
+// esentiall replace the "*j = ColorConfig(plain)" with a prefix of the
+
+// parsed, err := parseUnknownColor(raw["value"])
+// if err != nil {
+// 	return err
+// }
+// plain.Value = parsed
+
+// ====================== no constant ========================
+
+// same as with constant
+
+// ====================== with constant ======================
+
+// ...................... keep existing ......................
+
+func (j *ColorConfig) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["value"]; raw != nil && !ok {
+		return fmt.Errorf("field value in ColorConfig: required")
+	}
+
+	type Plain ColorConfig
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+
+	// +++++++++++++++++++++++++ add ++++++++++++++++++++++++++++
+
+	parsed, err := parseUnknownColor(raw["value"])
+	if err != nil {
+		return err
+	}
+	plain.Value = parsed
+
+	// ...................... keep existing ......................
+
+	*j = ColorConfig(plain)
+	return nil
+}

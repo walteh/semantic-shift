@@ -21,6 +21,10 @@
 		"CMYKValue": {
 			"additionalProperties": false,
 			"properties": {
+				"model": {
+					"const": "cmyk",
+					"type": "string"
+				},
 				"c": {
 					"maximum": 1,
 					"minimum": 0,
@@ -253,6 +257,10 @@
 		"HSIValue": {
 			"additionalProperties": false,
 			"properties": {
+				"model": {
+					"const": "hsi",
+					"type": "string"
+				},
 				"h": {
 					"maximum": 360,
 					"minimum": 0,
@@ -275,6 +283,10 @@
 		"HSLValue": {
 			"additionalProperties": false,
 			"properties": {
+				"model": {
+					"const": "hsl",
+					"type": "string"
+				},
 				"h": {
 					"maximum": 360,
 					"minimum": 0,
@@ -297,6 +309,10 @@
 		"HSVValue": {
 			"additionalProperties": false,
 			"properties": {
+				"model": {
+					"const": "hsv",
+					"type": "string"
+				},
 				"h": {
 					"maximum": 360,
 					"minimum": 0,
@@ -319,6 +335,10 @@
 		"LABValue": {
 			"additionalProperties": false,
 			"properties": {
+				"model": {
+					"const": "lab",
+					"type": "string"
+				},
 				"a": {
 					"maximum": 98.254,
 					"minimum": -86.185,
@@ -429,23 +449,19 @@
 		},
 		"Palette": {
 			"anyOf": [
-				{
-					"$ref": "#/definitions/CategoricalPalette"
-				},
-				{
-					"$ref": "#/definitions/DiscreteScalePalette"
-				},
-				{
-					"$ref": "#/definitions/ContinuousScalePalette"
-				},
-				{
-					"$ref": "#/definitions/MatrixPalette"
-				}
+				{ "$ref": "#/definitions/CategoricalPalette" },
+				{ "$ref": "#/definitions/DiscreteScalePalette" },
+				{ "$ref": "#/definitions/ContinuousScalePalette" },
+				{ "$ref": "#/definitions/MatrixPalette" }
 			]
 		},
 		"RGBAValue": {
 			"additionalProperties": false,
 			"properties": {
+				"model": {
+					"const": "rgba",
+					"type": "string"
+				},
 				"a": {
 					"maximum": 1,
 					"minimum": 0,
@@ -473,6 +489,10 @@
 		"RGBValue": {
 			"additionalProperties": false,
 			"properties": {
+				"model": {
+					"const": "rgb",
+					"type": "string"
+				},
 				"b": {
 					"maximum": 255,
 					"minimum": 0,

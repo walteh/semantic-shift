@@ -6,158 +6,6 @@ import (
 	"reflect"
 )
 
-// adding new code
-// step 1: find models in the schema that are just a list of anyOfs
-// step 2: check if there are any common string constants among the anyOfs
-// step 3: if there are constants, add an interface with a method that returns that string constant
-// step 4: implement the interface for each model
-// step 5: create parseUnknown function for each parent
-// step 6: create marshalJSON for each child
-
-// modifiying existing code
-// 1: remove the previously generated struct field from the generated struct (for the constants)
-// 2: modify the unmarshalJSON of needed types to use the new unknownParse functions
-
-type Color2 interface {
-	isColor2()
-	Model() string
-}
-
-func (me *LCHValue) Model() string {
-	return "lch"
-}
-func (me *LABValue) Model() string {
-	return "lab"
-}
-func (me *HSVValue) Model() string {
-	return "hsv"
-}
-func (me *HSLValue) Model() string {
-	return "hsl"
-}
-func (me *RGBAValue) Model() string {
-	return "rgba"
-}
-func (me *RGBValue) Model() string {
-	return "rgb"
-}
-
-func (me *LCHValue) isColor2()  {}
-func (me *LABValue) isColor2()  {}
-func (me *HSVValue) isColor2()  {}
-func (me *HSLValue) isColor2()  {}
-func (me *RGBAValue) isColor2() {}
-func (me *RGBValue) isColor2()  {}
-
-// for types with a constant model field
-func parseUnknownColor2(b interface{}) (Color2, error) {
-
-	str, err := json.Marshal(b)
-	if err != nil {
-		return nil, err
-	}
-
-	type Plain struct {
-		Model string `json:"model" yaml:"model" mapstructure:"model"`
-	}
-	var plain Plain
-	if err := json.Unmarshal(str, &plain); err != nil {
-		return nil, err
-	}
-
-	switch plain.Model {
-	case "lch":
-		var lch LCHValue
-		err = json.Unmarshal(str, &lch)
-		return &lch, err
-	case "lab":
-		var lab LABValue
-		err = json.Unmarshal(str, &lab)
-		return &lab, err
-	case "hsv":
-		var hsv HSVValue
-		err = json.Unmarshal(str, &hsv)
-		return &hsv, err
-	case "hsl":
-		var hsl HSLValue
-		err = json.Unmarshal(str, &hsl)
-		return &hsl, err
-	case "rgba":
-		var rgba RGBAValue
-		err = json.Unmarshal(str, &rgba)
-		return &rgba, err
-	case "rgb":
-		var rgb RGBValue
-		err = json.Unmarshal(str, &rgb)
-		return &rgb, err
-	default:
-		return nil, fmt.Errorf("invalid model: %s", plain.Model)
-	}
-}
-
-func parseUnknownColor2IfNoConstant(b interface{}) (Color2, error) {
-
-	str, err := json.Marshal(b)
-	if err != nil {
-		return nil, err
-	}
-
-	opts := []Color2{
-		&LCHValue{},
-		&LABValue{},
-		&HSVValue{},
-		&HSLValue{},
-		&RGBAValue{},
-		&RGBValue{},
-	}
-
-	for _, opt := range opts {
-		err = json.Unmarshal(str, opt)
-		if err == nil {
-			return opt, nil
-		}
-	}
-
-	return nil, fmt.Errorf("invalid color")
-}
-
-func (j LCHValue) MarshalJSON() ([]byte, error) {
-	// we need to add the constant field to the output
-	type Plain LCHValue
-	myMarshal := struct {
-		Model string `json:"model" yaml:"model" mapstructure:"model"`
-		Plain
-	}{
-		Model: j.Model(),
-		Plain: Plain(j),
-	}
-	return json.Marshal(myMarshal)
-}
-
-func (j *ColorConfig) UnmarshalJSONd(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["value"]; raw != nil && !ok {
-		return fmt.Errorf("field value in ColorConfig: required")
-	}
-
-	type Plain ColorConfig
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-
-	parsed, err := parseUnknownColor2(raw["value"])
-	if err != nil {
-		return err
-	}
-	plain.Value = parsed
-
-	*j = ColorConfig(plain)
-	return nil
-}
 
 /////////////////
 
@@ -259,33 +107,33 @@ func (j *CMYKValue) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type CategoricalPalette struct {
-	// ColorScheme corresponds to the JSON schema field "colorScheme".
-	ColorScheme *ColorSchemeType `json:"colorScheme,omitempty" yaml:"colorScheme,omitempty" mapstructure:"colorScheme,omitempty"`
+// type CategoricalPalette struct {
+// 	// ColorScheme corresponds to the JSON schema field "colorScheme".
+// 	ColorScheme *ColorSchemeType `json:"colorScheme,omitempty" yaml:"colorScheme,omitempty" mapstructure:"colorScheme,omitempty"`
 
-	// Colors corresponds to the JSON schema field "colors".
-	Colors []CategoricalPaletteColorsElem `json:"colors" yaml:"colors" mapstructure:"colors"`
+// 	// Colors corresponds to the JSON schema field "colors".
+// 	Colors []CategoricalPaletteColorsElem `json:"colors" yaml:"colors" mapstructure:"colors"`
 
-	// Description corresponds to the JSON schema field "description".
-	Description *string `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
+// 	// Description corresponds to the JSON schema field "description".
+// 	Description *string `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
 
-	// Id corresponds to the JSON schema field "id".
-	Id *string `json:"id,omitempty" yaml:"id,omitempty" mapstructure:"id,omitempty"`
+// 	// Id corresponds to the JSON schema field "id".
+// 	Id *string `json:"id,omitempty" yaml:"id,omitempty" mapstructure:"id,omitempty"`
 
-	// Name corresponds to the JSON schema field "name".
-	Name string `json:"name" yaml:"name" mapstructure:"name"`
+// 	// Name corresponds to the JSON schema field "name".
+// 	Name string `json:"name" yaml:"name" mapstructure:"name"`
 
-	// Semantic corresponds to the JSON schema field "semantic".
-	Semantic *string `json:"semantic" yaml:"semantic" mapstructure:"semantic"`
+// 	// Semantic corresponds to the JSON schema field "semantic".
+// 	Semantic *string `json:"semantic" yaml:"semantic" mapstructure:"semantic"`
 
-	// Type corresponds to the JSON schema field "type".
-	Type string `json:"type" yaml:"type" mapstructure:"type"`
+// 	// Type corresponds to the JSON schema field "type".
+// 	Type string `json:"type" yaml:"type" mapstructure:"type"`
 
-	// Usage corresponds to the JSON schema field "usage".
-	Usage []string `json:"usage,omitempty" yaml:"usage,omitempty" mapstructure:"usage,omitempty"`
-}
+// 	// Usage corresponds to the JSON schema field "usage".
+// 	Usage []string `json:"usage,omitempty" yaml:"usage,omitempty" mapstructure:"usage,omitempty"`
+// }
 
-type CategoricalPaletteColorsElem interface{}
+// type CategoricalPaletteColorsElem interface{}
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *CategoricalPalette) UnmarshalJSON(b []byte) error {
@@ -314,44 +162,43 @@ func (j *CategoricalPalette) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type Color interface{}
 
-type ColorConfig struct {
-	// Id corresponds to the JSON schema field "id".
-	Id *string `json:"id,omitempty" yaml:"id,omitempty" mapstructure:"id,omitempty"`
+// type ColorConfig struct {
+// 	// Id corresponds to the JSON schema field "id".
+// 	Id *string `json:"id,omitempty" yaml:"id,omitempty" mapstructure:"id,omitempty"`
 
-	// Name corresponds to the JSON schema field "name".
-	Name *string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
+// 	// Name corresponds to the JSON schema field "name".
+// 	Name *string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
 
-	// Undertone corresponds to the JSON schema field "undertone".
-	Undertone *Undertone `json:"undertone,omitempty" yaml:"undertone,omitempty" mapstructure:"undertone,omitempty"`
+// 	// Undertone corresponds to the JSON schema field "undertone".
+// 	Undertone *Undertone `json:"undertone,omitempty" yaml:"undertone,omitempty" mapstructure:"undertone,omitempty"`
 
-	// Usage corresponds to the JSON schema field "usage".
-	Usage []string `json:"usage,omitempty" yaml:"usage,omitempty" mapstructure:"usage,omitempty"`
+// 	// Usage corresponds to the JSON schema field "usage".
+// 	Usage []string `json:"usage,omitempty" yaml:"usage,omitempty" mapstructure:"usage,omitempty"`
 
-	// Value corresponds to the JSON schema field "value".
-	Value ColorConfigValue `json:"value" yaml:"value" mapstructure:"value"`
-}
+// 	// Value corresponds to the JSON schema field "value".
+// 	Value ColorConfigValue `json:"value" yaml:"value" mapstructure:"value"`
+// }
 
-type ColorConfigValue interface{}
+// type ColorConfigValue interface{}
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *ColorConfig) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["value"]; raw != nil && !ok {
-		return fmt.Errorf("field value in ColorConfig: required")
-	}
-	type Plain ColorConfig
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = ColorConfig(plain)
-	return nil
-}
+// // UnmarshalJSON implements json.Unmarshaler.
+// func (j *ColorConfig) UnmarshalJSON(b []byte) error {
+// 	var raw map[string]interface{}
+// 	if err := json.Unmarshal(b, &raw); err != nil {
+// 		return err
+// 	}
+// 	if _, ok := raw["value"]; raw != nil && !ok {
+// 		return fmt.Errorf("field value in ColorConfig: required")
+// 	}
+// 	type Plain ColorConfig
+// 	var plain Plain
+// 	if err := json.Unmarshal(b, &plain); err != nil {
+// 		return err
+// 	}
+// 	*j = ColorConfig(plain)
+// 	return nil
+// }
 
 type ColorSchemeType string
 
@@ -913,7 +760,6 @@ func (j *MatrixPalette) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-type Palette interface{}
 
 type RGBAValue struct {
 	// A corresponds to the JSON schema field "a".
