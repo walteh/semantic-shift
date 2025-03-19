@@ -2,6 +2,9 @@ package repostprocess
 
 import (
 	"fmt"
+	"go/format"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -141,6 +144,18 @@ func TestCodeGenerator_Generate(t *testing.T) {
 	checkForContent(t, unmarshalStr, "func (j *AssetPack) UnmarshalJSON(b []byte) error")
 	checkForContent(t, unmarshalStr, "palettes := make(PaletteSlice")
 	checkForContent(t, unmarshalStr, "parsed, err := parseUnknownPalette(item)")
+
+	// Additional checks per user request
+
+	// Check enhanced file doesn't contain type definitions that should have been replaced
+	checkForAbsence(t, enhancedStr, "Type string `json:\"type\" yaml:\"type\" mapstructure:\"type\"`")
+	checkForAbsence(t, enhancedStr, "type Palette interface{}")
+
+	// Check unmarshal file doesn't contain functions it shouldn't
+	checkForAbsence(t, unmarshalStr, "(j *MatrixPalette) UnmarshalJSON(")
+
+	// Check unmarshal file contains specific validation
+	checkForContent(t, unmarshalStr, "if _, ok := raw[\"semantic\"]; raw != nil && !ok {")
 }
 
 func TestCodeGenerator_GenerateConfusing(t *testing.T) {
@@ -310,6 +325,125 @@ func TestJSONRoundTrip(t *testing.T) {
 	checkForContent(t, unmarshalStr, "plain.Value = parsed")
 }
 
+func TestGeneratedCodeValidation(t *testing.T) {
+	testCases := []struct {
+		name       string
+		schemaPath string
+		modelPath  string
+	}{
+		{
+			name:       "ColorSchema",
+			schemaPath: filepath.Join("testdata", "color", "color.schema.json"),
+			modelPath:  filepath.Join("testdata", "color", "model.gen.go"),
+		},
+		{
+			name:       "ConfusingSchema",
+			schemaPath: filepath.Join("testdata", "confusing", "confusing.schema.json"),
+			modelPath:  filepath.Join("testdata", "confusing", "model.gen.go"),
+		},
+		{
+			name:       "SimpleSchema",
+			schemaPath: filepath.Join("testdata", "simple", "simple.schema.json"),
+			modelPath:  filepath.Join("testdata", "simple", "model.gen.go"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			outputDir := filepath.Join(tmpDir, "output")
+
+			// Ensure output directory exists
+			err := os.MkdirAll(outputDir, 0755)
+			if err != nil {
+				t.Fatalf("Failed to create output directory: %v", err)
+			}
+
+			// Generate code
+			analyzer, err := NewSchemaAnalyzer(tc.schemaPath)
+			if err != nil {
+				t.Fatalf("Failed to create analyzer: %v", err)
+			}
+
+			results, err := analyzer.Analyze()
+			if err != nil {
+				t.Fatalf("Failed to analyze schema: %v", err)
+			}
+
+			generator := NewCodeGenerator(tc.modelPath, outputDir, results)
+			err = generator.Generate()
+			if err != nil {
+				t.Fatalf("Failed to generate code: %v", err)
+			}
+
+			// List all generated files
+			outputFiles := []string{
+				filepath.Join(outputDir, "model_enhanced.gen.go"),
+				filepath.Join(outputDir, "model_interfaces.gen.go"),
+				filepath.Join(outputDir, "model_unmarshal.gen.go"),
+			}
+
+			for _, file := range outputFiles {
+				// Check that file exists
+				if _, err := os.Stat(file); os.IsNotExist(err) {
+					t.Fatalf("Expected output file not created: %s", file)
+				}
+
+				// Run the Go parser to check if the generated code is valid Go
+				validateGoSyntax(t, file)
+
+				// Format the file and check if it changes (indicates non-standard formatting)
+				validateGoFormat(t, file)
+			}
+
+			// Check for package name consistency
+			verifyPackageConsistency(t, outputFiles)
+		})
+	}
+}
+
+// verifyPackageConsistency checks that all files have the same package name
+func verifyPackageConsistency(t *testing.T, files []string) {
+	t.Helper()
+
+	var packageName string
+	packagesInFiles := make(map[string]string)
+
+	for _, file := range files {
+		// Read the file content
+		content, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("Failed to read file %s: %v", file, err)
+		}
+
+		// Parse the file to extract package name
+		fset := token.NewFileSet()
+		parsedFile, err := parser.ParseFile(fset, file, content, parser.PackageClauseOnly)
+		if err != nil {
+			t.Errorf("Failed to parse file %s: %v", file, err)
+			continue
+		}
+
+		currentPackage := parsedFile.Name.Name
+		packagesInFiles[file] = currentPackage
+
+		if packageName == "" {
+			packageName = currentPackage
+		} else if currentPackage != packageName {
+			t.Errorf("Package name inconsistency: %s has package %q, but expected %q",
+				filepath.Base(file), currentPackage, packageName)
+		}
+	}
+
+	// If there was a failure, log the package names for debugging
+	if t.Failed() {
+		t.Logf("Package names by file:")
+		for file, pkg := range packagesInFiles {
+			t.Logf("  %s: %s", filepath.Base(file), pkg)
+		}
+	}
+}
+
 func checkForContent(t *testing.T, content, expected string) {
 	if !contains(content, expected) {
 		t.Errorf("Expected content not found: %s", expected)
@@ -318,4 +452,58 @@ func checkForContent(t *testing.T, content, expected string) {
 
 func contains(s, substr string) bool {
 	return strings.Contains(s, substr)
+}
+
+// validateGoSyntax checks if the file contains valid Go syntax by parsing it
+func validateGoSyntax(t *testing.T, filePath string) {
+	t.Helper()
+
+	// Read the file content
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("Failed to read file %s: %v", filePath, err)
+	}
+
+	// Parse the file to check for syntax errors
+	fset := token.NewFileSet()
+	_, err = parser.ParseFile(fset, filePath, content, parser.AllErrors)
+	if err != nil {
+		t.Errorf("Generated file %s contains invalid Go syntax: %v", filePath, err)
+	}
+}
+
+// validateGoFormat checks if the file follows standard Go formatting
+func validateGoFormat(t *testing.T, filePath string) {
+	t.Helper()
+
+	// Read the file content
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("Failed to read file %s: %v", filePath, err)
+	}
+
+	// Format the file using go/format
+	formatted, err := format.Source(content)
+	if err != nil {
+		t.Errorf("Failed to format file %s: %v", filePath, err)
+		return
+	}
+
+	// Compare original with formatted
+	if string(content) != string(formatted) {
+		// Write the formatted content to a temp file for debugging
+		formattedPath := filePath + ".formatted"
+		err = os.WriteFile(formattedPath, formatted, 0644)
+		if err != nil {
+			t.Logf("Failed to write formatted file for comparison: %v", err)
+		}
+
+		t.Errorf("File %s is not properly formatted according to Go standards", filePath)
+	}
+}
+
+func checkForAbsence(t *testing.T, content, expected string) {
+	if contains(content, expected) {
+		t.Errorf("Unexpected content found: %s", expected)
+	}
 }

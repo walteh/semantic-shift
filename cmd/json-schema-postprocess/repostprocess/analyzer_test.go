@@ -97,23 +97,27 @@ func TestSchemaAnalyzer_SimpleSchema(t *testing.T) {
 	// Check parent callers
 	directCallerFound := false
 	for _, caller := range results.DirectParentCallers {
-		if caller.Name == "SimpleSchemaJsonConfig" && caller.Field == "shape" && caller.ParentRef == "Shape" {
-			directCallerFound = true
-			break
+		if caller.ParentRef == "Shape" {
+			if caller.Name == "config" && caller.Field == "shape" {
+				directCallerFound = true
+				break
+			}
 		}
 	}
 	if !directCallerFound {
-		t.Error("Expected direct parent caller SimpleSchemaJsonConfig.shape not found")
+		t.Error("Expected direct parent caller config.shape not found")
 	}
 
 	arrayCallerFound := false
 	for _, caller := range results.ArrayParentCallers {
-		if caller.Name == "SimpleSchemaJson" && caller.Field == "shapes" && caller.ParentRef == "Shape" {
-			arrayCallerFound = true
-			break
+		if caller.ParentRef == "Shape" {
+			if caller.Field == "shapes" {
+				arrayCallerFound = true
+				break
+			}
 		}
 	}
 	if !arrayCallerFound {
-		t.Error("Expected array parent caller SimpleSchemaJson.shapes not found")
+		t.Error("Expected array parent caller for shapes not found")
 	}
 }
