@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"go/parser"
 	"go/token"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -155,8 +156,7 @@ func (cg *CodeGenerator) generateInterfaces() error {
 	}
 
 	// Write to file
-	outputPath := filepath.Join(cg.outputDir, "model_interfaces.gen.go")
-	if err := os.WriteFile(outputPath, formattedBytes, 0644); err != nil {
+	if err := cg.writeToFile(string(formattedBytes), "model_interfaces.gen.go"); err != nil {
 		return errors.Errorf("writing interfaces file: %w", err)
 	}
 
@@ -353,8 +353,7 @@ func (cg *CodeGenerator) generateUnmarshalFunctions() error {
 	}
 
 	// Write to file
-	outputPath := filepath.Join(cg.outputDir, "model_unmarshal.gen.go")
-	if err := os.WriteFile(outputPath, formattedBytes, 0644); err != nil {
+	if err := cg.writeToFile(string(formattedBytes), "model_unmarshal.gen.go"); err != nil {
 		return errors.Errorf("writing unmarshal file: %w", err)
 	}
 
@@ -511,8 +510,7 @@ func (cg *CodeGenerator) generateEnhancedModel() error {
 	}
 
 	// Write the file
-	outputPath := filepath.Join(cg.outputDir, "model_enhanced.gen.go")
-	if err := os.WriteFile(outputPath, buf.Bytes(), 0644); err != nil {
+	if err := cg.writeToFile(string(buf.Bytes()), "model_enhanced.gen.go"); err != nil {
 		return errors.Errorf("writing enhanced model file: %w", err)
 	}
 
@@ -550,4 +548,25 @@ func camelCase(s string) string {
 	runes := []rune(s)
 	runes[0] = unicode.ToLower(runes[0])
 	return string(runes)
+}
+
+func (g *CodeGenerator) writeToFile(data, filename string) error {
+	outputPath := filepath.Join(g.outputDir, filename)
+
+	// Format the Go code before writing
+	formattedData, err := format.Source([]byte(data))
+	if err != nil {
+		// If formatting fails, log the error but continue with the unformatted code
+		// This ensures the test can still check the code even if formatting fails
+		log.Printf("Warning: Failed to format code for %s: %v", filename, err)
+		formattedData = []byte(data)
+	}
+
+	// Write the file
+	err = os.WriteFile(outputPath, formattedData, 0644)
+	if err != nil {
+		return errors.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
 }
