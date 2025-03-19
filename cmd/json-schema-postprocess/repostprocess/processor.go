@@ -1,7 +1,7 @@
-package postprocess
+package repostprocess
 
 import (
-	"fmt"
+	"gitlab.com/tozd/go/errors"
 )
 
 // Processor coordinates the schema analysis and code generation
@@ -25,18 +25,18 @@ func (p *Processor) Process() error {
 	// Step 1: Analyze the schema
 	analyzer, err := NewSchemaAnalyzer(p.SchemaPath)
 	if err != nil {
-		return fmt.Errorf("creating schema analyzer: %w", err)
+		return errors.Errorf("creating schema analyzer: %w", err)
 	}
 
 	results, err := analyzer.Analyze()
 	if err != nil {
-		return fmt.Errorf("analyzing schema: %w", err)
+		return errors.Errorf("analyzing schema: %w", err)
 	}
 
 	// Step 2: Generate all the code
 	generator := NewCodeGenerator(p.ModelPath, p.OutputDirPath, results)
 	if err := generator.Generate(); err != nil {
-		return fmt.Errorf("generating code: %w", err)
+		return errors.Errorf("generating code: %w", err)
 	}
 
 	return nil

@@ -1,16 +1,18 @@
-package postprocess
+package repostprocess
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
+
+	"gitlab.com/tozd/go/errors"
 )
 
 // SchemaAnalyzer is responsible for analyzing the JSON schema
 // and identifying the structure of "parents" and their "children"
 type SchemaAnalyzer struct {
 	schemaData map[string]interface{}
+	schemaPath string
 }
 
 // SchemaResults contains the analysis results
@@ -25,11 +27,11 @@ type SchemaResults struct {
 
 // ParentInfo holds information about a parent schema
 type ParentInfo struct {
-	Name         string
-	ChildrenRefs []string
-	Children     []string
-	ConstField   string
-	ConstValues  map[string]string
+	Name           string
+	ChildrenRefs   []string
+	Children       []string
+	ConstantField  string
+	ConstantValues map[string]string
 }
 
 // ParentCallerInfo holds information about schemas that reference parents
@@ -47,16 +49,17 @@ type ParentCallerInfo struct {
 func NewSchemaAnalyzer(schemaPath string) (*SchemaAnalyzer, error) {
 	schemaFile, err := os.ReadFile(schemaPath)
 	if err != nil {
-		return nil, fmt.Errorf("reading schema file: %w", err)
+		return nil, errors.Errorf("reading schema file: %w", err)
 	}
 
 	var schemaData map[string]interface{}
 	if err := json.Unmarshal(schemaFile, &schemaData); err != nil {
-		return nil, fmt.Errorf("parsing schema JSON: %w", err)
+		return nil, errors.Errorf("parsing schema JSON: %w", err)
 	}
 
 	return &SchemaAnalyzer{
 		schemaData: schemaData,
+		schemaPath: schemaPath,
 	}, nil
 }
 
@@ -74,10 +77,29 @@ func (sa *SchemaAnalyzer) Analyze() (*SchemaResults, error) {
 	// Get the definitions section from the schema
 	definitions, ok := sa.schemaData["definitions"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("schema doesn't have definitions section")
+		return nil, errors.Errorf("schema doesn't have definitions section")
 	}
 
 	// Step 1: Identify parents (schemas with anyOf)
+	if err := sa.identifyParents(definitions, results); err != nil {
+		return nil, err
+	}
+
+	// Step 2: Analyze children for common constant fields
+	if err := sa.identifyConstantFields(definitions, results); err != nil {
+		return nil, err
+	}
+
+	// Step 3: Find all references to parents
+	if err := sa.identifyParentCallers(definitions, results); err != nil {
+		return nil, err
+	}
+
+	return results, nil
+}
+
+// identifyParents identifies schemas that entirely consist of a list of anyOfs
+func (sa *SchemaAnalyzer) identifyParents(definitions map[string]interface{}, results *SchemaResults) error {
 	for defName, defObj := range definitions {
 		defMap, ok := defObj.(map[string]interface{})
 		if !ok {
@@ -91,10 +113,10 @@ func (sa *SchemaAnalyzer) Analyze() (*SchemaResults, error) {
 
 		// This is a parent schema
 		parent := ParentInfo{
-			Name:         defName,
-			ChildrenRefs: make([]string, 0, len(anyOf)),
-			Children:     make([]string, 0, len(anyOf)),
-			ConstValues:  make(map[string]string),
+			Name:           defName,
+			ChildrenRefs:   make([]string, 0, len(anyOf)),
+			Children:       make([]string, 0, len(anyOf)),
+			ConstantValues: make(map[string]string),
 		}
 
 		// Extract the child references
@@ -116,8 +138,11 @@ func (sa *SchemaAnalyzer) Analyze() (*SchemaResults, error) {
 
 		results.Parents[defName] = parent
 	}
+	return nil
+}
 
-	// Step 2: Analyze children for common constant fields
+// identifyConstantFields identifies common constant fields in children of parent schemas
+func (sa *SchemaAnalyzer) identifyConstantFields(definitions map[string]interface{}, results *SchemaResults) error {
 	for parentName, parentInfo := range results.Parents {
 		if len(parentInfo.Children) == 0 {
 			continue
@@ -204,16 +229,19 @@ func (sa *SchemaAnalyzer) Analyze() (*SchemaResults, error) {
 			if allHaveField {
 				// We found a common constant field in all children
 				parent := results.Parents[parentName]
-				parent.ConstField = propName
-				parent.ConstValues = constValues
+				parent.ConstantField = propName
+				parent.ConstantValues = constValues
 				results.Parents[parentName] = parent
 				results.ConstantFieldNames[parentName] = propName
 				break
 			}
 		}
 	}
+	return nil
+}
 
-	// Step 3: Find all references to parents
+// identifyParentCallers identifies schemas that refer to parent schemas
+func (sa *SchemaAnalyzer) identifyParentCallers(definitions map[string]interface{}, results *SchemaResults) error {
 	for defName, defObj := range definitions {
 		defMap, ok := defObj.(map[string]interface{})
 		if !ok {
@@ -328,8 +356,7 @@ func (sa *SchemaAnalyzer) Analyze() (*SchemaResults, error) {
 			}
 		}
 	}
-
-	return results, nil
+	return nil
 }
 
 // extractRefName extracts the schema name from a reference string

@@ -8,7 +8,7 @@ import (
 
 	"gitlab.com/tozd/go/errors"
 
-	"github.com/walteh/semantic-shift/cmd/json-schema-postprocess/postprocess"
+	"github.com/walteh/semantic-shift/cmd/json-schema-postprocess/repostprocess"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 	}
 
 	// Create processor and run it
-	processor := postprocess.NewProcessor(*schemaFile, *modelFile, *outputDir)
+	processor := repostprocess.NewProcessor(*schemaFile, *modelFile, *outputDir)
 	if err := processor.Process(); err != nil {
 		fmt.Printf("Error processing schema: %v\n", err)
 		os.Exit(1)
@@ -62,7 +62,7 @@ func runWithTestData() error {
 	outputDir := filepath.Join(testdataDir, "output")
 
 	// Create processor and run it
-	processor := postprocess.NewProcessor(schemaFile, modelFile, outputDir)
+	processor := repostprocess.NewProcessor(schemaFile, modelFile, outputDir)
 	if err := processor.Process(); err != nil {
 		return errors.Errorf("processing schema: %w", err)
 	}
