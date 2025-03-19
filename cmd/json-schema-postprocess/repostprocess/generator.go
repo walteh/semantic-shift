@@ -22,15 +22,23 @@ type CodeGenerator struct {
 	modelPath string
 	outputDir string
 	results   *SchemaResults
+	// Add semantic field name configuration
+	semanticFieldName string
 }
 
 // NewCodeGenerator creates a new code generator
 func NewCodeGenerator(modelPath, outputDir string, results *SchemaResults) *CodeGenerator {
 	return &CodeGenerator{
-		modelPath: modelPath,
-		outputDir: outputDir,
-		results:   results,
+		modelPath:         modelPath,
+		outputDir:         outputDir,
+		results:           results,
+		semanticFieldName: "semantic", // Default value, can be configured
 	}
+}
+
+// SetSemanticFieldName sets the name of the semantic field to preserve
+func (cg *CodeGenerator) SetSemanticFieldName(name string) {
+	cg.semanticFieldName = name
 }
 
 // Generate performs the code generation
@@ -221,9 +229,40 @@ func (cg *CodeGenerator) generateUnmarshalFunctions() error {
 		buf.WriteString("\t\treturn nil, err\n")
 		buf.WriteString("\t}\n\n")
 
-		// If we have a constant field, use it to determine the type
+		// Add code to check for type in raw data
+		buf.WriteString("\t// First, unmarshal to check for type information\n")
+		buf.WriteString("\tvar rawData map[string]interface{}\n")
+
+		// Handle constant field case
 		if info.ConstantField != "" {
-			buf.WriteString(fmt.Sprintf("\t// Use the %s field to determine the type\n", info.ConstantField))
+			buf.WriteString("\tif err := json.Unmarshal(str, &rawData); err == nil {\n")
+			buf.WriteString(fmt.Sprintf("\t\t// Use the %s field to determine the type\n", info.ConstantField))
+			buf.WriteString(fmt.Sprintf("\t\ttypeVal, ok := rawData[\"%s\"]\n", info.ConstantField))
+			buf.WriteString("\t\tif !ok {\n")
+			buf.WriteString(fmt.Sprintf("\t\t\treturn nil, fmt.Errorf(\"missing '%s' field for %s type determination\")\n", info.ConstantField, parentName))
+			buf.WriteString("\t\t}\n\n")
+
+			buf.WriteString("\t\ttypeStr, ok := typeVal.(string)\n")
+			buf.WriteString("\t\tif !ok {\n")
+			buf.WriteString(fmt.Sprintf("\t\t\treturn nil, fmt.Errorf(\"'%s' field must be a string for %s type determination\")\n", info.ConstantField, parentName))
+			buf.WriteString("\t\t}\n\n")
+
+			buf.WriteString("\t\tswitch typeStr {\n")
+			// Add a case for each child
+			for childName, constValue := range info.ConstantValues {
+				buf.WriteString(fmt.Sprintf("\t\t\tcase \"%s\":\n", constValue))
+				buf.WriteString(fmt.Sprintf("\t\t\t\tvar %s %s\n", camelCase(childName), childName))
+				buf.WriteString(fmt.Sprintf("\t\t\t\terr = json.Unmarshal(str, &%s)\n", camelCase(childName)))
+				buf.WriteString(fmt.Sprintf("\t\t\t\treturn &%s, err\n", camelCase(childName)))
+			}
+
+			buf.WriteString("\t\t\tdefault:\n")
+			buf.WriteString(fmt.Sprintf("\t\t\t\treturn nil, fmt.Errorf(\"invalid %s type: %%s\", typeStr)\n", parentName))
+			buf.WriteString("\t\t\t}\n")
+			buf.WriteString("\t\t}\n")
+
+			// Original type detection logic (for when type check didn't work)
+			buf.WriteString(fmt.Sprintf("\t// Fallback: use the %s field to determine the type\n", info.ConstantField))
 			buf.WriteString("\ttype Plain struct {\n")
 			buf.WriteString(fmt.Sprintf("\t\t%s %sModel `json:\"%s\" yaml:\"%s\" mapstructure:\"%s\"`\n",
 				strings.Title(info.ConstantField), parentName, info.ConstantField, info.ConstantField, info.ConstantField))
@@ -252,7 +291,7 @@ func (cg *CodeGenerator) generateUnmarshalFunctions() error {
 			buf.WriteString("\t}\n")
 		} else {
 			// No constant field, try each option
-			buf.WriteString("\t// Try each possible type\n")
+			buf.WriteString("\t// No constant field, try each possible type\n")
 			buf.WriteString("\topts := []" + parentName + "{\n")
 
 			// Add each child to the options
@@ -312,11 +351,16 @@ func (cg *CodeGenerator) generateUnmarshalFunctions() error {
 		buf.WriteString("\tvar raw map[string]interface{}\n")
 		buf.WriteString("\tif err := json.Unmarshal(b, &raw); err != nil {\n")
 		buf.WriteString("\t\treturn err\n")
-		buf.WriteString("\t}\n")
+		buf.WriteString("\t}\n\n")
 
-		// Check if required field is present
+		// Required field checks
 		buf.WriteString(fmt.Sprintf("\tif _, ok := raw[\"%s\"]; raw != nil && !ok {\n", fieldName))
 		buf.WriteString(fmt.Sprintf("\t\treturn fmt.Errorf(\"field %s in %s: required\")\n", fieldName, structName))
+		buf.WriteString("\t}\n")
+
+		// Add the semantic field check
+		buf.WriteString(fmt.Sprintf("\tif _, ok := raw[\"%s\"]; raw != nil && !ok {\n", cg.semanticFieldName))
+		buf.WriteString(fmt.Sprintf("\t\treturn fmt.Errorf(\"field %s in %s: required\")\n", cg.semanticFieldName, structName))
 		buf.WriteString("\t}\n\n")
 
 		buf.WriteString(fmt.Sprintf("\ttype Plain %s\n", structName))
@@ -375,6 +419,14 @@ func (cg *CodeGenerator) generateUnmarshalFunctions() error {
 		buf.WriteString(fmt.Sprintf("\t*j = %s(plain)\n", structName))
 		buf.WriteString("\treturn nil\n")
 		buf.WriteString("}\n\n")
+	}
+
+	// Debug output
+	rawCode := buf.String()
+	// Write the raw code to a debug file
+	debugFileName := filepath.Join(cg.outputDir, "debug_unmarshal.go")
+	if err := os.WriteFile(debugFileName, []byte(rawCode), 0644); err != nil {
+		return errors.Errorf("writing debug file: %w", err)
 	}
 
 	// Format the code
@@ -505,6 +557,11 @@ func (cg *CodeGenerator) generateEnhancedModel() error {
 								jsonTag = tag[start:end]
 							}
 						}
+					}
+
+					// Skip fields named "Type" with json tag "type"
+					if fieldName == "Type" && jsonTag == "type" {
+						continue
 					}
 
 					// Check for field modifications

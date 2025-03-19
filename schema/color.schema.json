@@ -205,13 +205,6 @@
 				{ "$ref": "#/definitions/RGBValue" },
 				{ "$ref": "#/definitions/RGBAValue" },
 				{ "$ref": "#/definitions/LABValue" },
-				{ "$ref": "#/definitions/CMYKValue" },
-				{ "$ref": "#/definitions/HSLValue" },
-				{ "$ref": "#/definitions/HSVValue" },
-				{ "$ref": "#/definitions/HSIValue" },
-				{ "$ref": "#/definitions/RGBValue" },
-				{ "$ref": "#/definitions/RGBAValue" },
-				{ "$ref": "#/definitions/LABValue" },
 				{ "$ref": "#/definitions/LCHValue" },
 				{ "$ref": "#/definitions/CMYKValue" }
 			]
